@@ -71,8 +71,8 @@ async function loadMyDailyStats(userId){
     const tr=document.createElement('tr');
     [r.report_date,r.vs_points,r.donation_points,r.status==='approved'?'Freigegeben':r.status==='rejected'?'Abgelehnt':'Ausstehend',r.review_note||'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td)});
     const action=document.createElement('td');
-    if(r.status==='rejected'||r.status==='pending'){
-      const b=document.createElement('button');b.type='button';b.className='btn secondary';b.textContent=r.status==='rejected'?'Korrigieren':'Bearbeiten';
+    if(r.status==='rejected'||r.status==='pending'||r.status==='approved'){
+      const b=document.createElement('button');b.type='button';b.className='btn secondary';b.textContent=r.status==='rejected'?'Korrigieren':r.status==='approved'?'Punkte nachtragen':'Bearbeiten';
       b.addEventListener('click',()=>{
         document.getElementById('statsDate').value=r.report_date;
         document.getElementById('vsPoints').value=String(r.vs_points);
