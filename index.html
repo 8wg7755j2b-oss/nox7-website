@@ -280,8 +280,8 @@ async function loadLeadershipMembers(currentProfile){
     const tr=document.createElement('tr'),nameCell=document.createElement('td'),rankCell=document.createElement('td'),powerCell=document.createElement('td'),actionCell=document.createElement('td');
     const name=document.createElement('input');name.value=p.display_name||'';name.maxLength=40;name.setAttribute('aria-label','Spielername');nameCell.append(name);
     const rank=document.createElement('select');['R1','R2','R3','R4','R5'].forEach(code=>{const option=document.createElement('option');option.value=code;option.textContent=code+' – '+(rankLabels[code]||code);rank.append(option);});rank.value=['R1','R2','R3','R4','R5'].includes(p.game_rank)?p.game_rank:'R1';
-    const isOwnR5=currentProfile&&p.id===currentProfile.id&&currentProfile.game_rank==='R5';
-    if(isOwnR5){rank.disabled=true;rank.title='Deinen eigenen R5-Rang kannst du nicht selbst ändern. Dafür ist eine ausdrückliche R5-Übergabe erforderlich.';}
+    const isOwnR5=currentProfile&&p.id===currentProfile.id&&currentProfile.game_rank==='R5'&&currentProfile.role!=='admin';
+    if(isOwnR5){rank.disabled=true;rank.title='Als aktueller R5 kannst du deinen eigenen Rang nicht über diese Auswahl ändern.';}
     rankCell.append(rank);
     const power=document.createElement('input');power.type='number';power.min='0';power.step='1';power.value=p.power==null?'':String(p.power);power.setAttribute('aria-label','Spielstärke');powerCell.append(power);
     const save=document.createElement('button');save.type='button';save.className='btn secondary';save.textContent='Speichern';
@@ -291,9 +291,20 @@ async function loadLeadershipMembers(currentProfile){
       if(rawPower===''||!Number.isSafeInteger(newPower)||newPower<0){status('leadershipMemberStatus','Bitte eine gültige Spielstärke ab 0 eingeben.',true);return;}
       save.disabled=true;status('leadershipMemberStatus','Speichere '+newName+' …');
       try{
+        let refreshedProfile=currentProfile;
         if(newRank!==p.game_rank){
-          const {error:rankError}=await supabaseClient.rpc('set_nox7_game_rank',{p_user_id:p.id,p_game_rank:newRank});
-          if(rankError){status('leadershipMemberStatus','Allianzrang konnte nicht gespeichert werden: '+rankError.message,true);return;}
+          if(newRank==='R5'){
+            if(!currentProfile||(currentProfile.game_rank!=='R5'&&!(currentProfile.role==='admin'))){status('leadershipMemberStatus','Nur R5 oder ADMIN darf R5 übertragen.',true);return;}
+            if(!window.confirm('R5 wirklich an '+newName+' übertragen? Deine ADMIN-Berechtigung bleibt erhalten.'))return;
+            const {error:rankError}=await supabaseClient.rpc('transfer_nox7_r5',{p_new_r5_user_id:p.id});
+            if(rankError){status('leadershipMemberStatus','R5-Übergabe fehlgeschlagen: '+rankError.message,true);return;}
+            if(currentProfile.id===p.id) refreshedProfile={...currentProfile,game_rank:'R5'};
+            else if(currentProfile.game_rank==='R5') refreshedProfile={...currentProfile,game_rank:'R1'};
+          }else{
+            const {error:rankError}=await supabaseClient.rpc('set_nox7_game_rank',{p_user_id:p.id,p_game_rank:newRank});
+            if(rankError){status('leadershipMemberStatus','Allianzrang konnte nicht gespeichert werden: '+rankError.message,true);return;}
+            if(currentProfile&&currentProfile.id===p.id) refreshedProfile={...currentProfile,game_rank:newRank};
+          }
         }
         const {error:detailsError}=await supabaseClient.rpc('update_nox7_member_details',{p_user_id:p.id,p_display_name:newName,p_power:newPower});
         if(detailsError){status('leadershipMemberStatus','Rang wurde gespeichert, aber Name/Spielstärke nicht: '+profileSaveError(detailsError),true);return;}
@@ -301,26 +312,11 @@ async function loadLeadershipMembers(currentProfile){
         if(checkError){status('leadershipMemberStatus','Gespeichert, aber Prüfung fehlgeschlagen: '+checkError.message,true);return;}
         if(!check||check.display_name!==newName||Number(check.power)!==newPower||check.game_rank!==newRank){status('leadershipMemberStatus','Die gespeicherten Werte stimmen nicht mit den Eingaben überein.',true);return;}
         status('leadershipMemberStatus','ERFOLG: '+newName+' – Name, Spielstärke und Rang wurden gespeichert und geprüft.');
-        await loadLeadershipMembers(currentProfile);await loadMembers();await loadRanking();
+        await loadLeadershipMembers(refreshedProfile);await loadMembers();await loadRanking();
       }catch(err){status('leadershipMemberStatus','Speicherfehler: '+(err.message||String(err)),true);}
       finally{save.disabled=false;}
     });
     actionCell.append(save);
-    if(currentProfile&&(currentProfile.game_rank==='R5'||(currentProfile.id===ADMIN_ID&&currentProfile.role==='admin'))&&p.id!==currentProfile.id&&p.game_rank!=='R5'){
-      const transfer=document.createElement('button');transfer.type='button';transfer.className='btn secondary';transfer.textContent='R5 übertragen';
-      transfer.addEventListener('click',async()=>{
-        if(!window.confirm('R5 wirklich an '+(p.display_name||'dieses Mitglied')+' übertragen? Danach wirst du selbst auf R1 gesetzt.'))return;
-        transfer.disabled=true;status('leadershipMemberStatus','Übertrage R5 an '+(p.display_name||'Mitglied')+' …');
-        try{
-          const {error:transferError}=await supabaseClient.rpc('transfer_nox7_r5',{p_new_r5_user_id:p.id});
-          if(transferError){status('leadershipMemberStatus','R5-Übergabe fehlgeschlagen: '+transferError.message,true);return;}
-          status('leadershipMemberStatus','R5 erfolgreich übertragen. Du bist jetzt R1; '+(p.display_name||'das ausgewählte Mitglied')+' ist jetzt R5.');
-          await loadLeadershipMembers({...currentProfile,game_rank:'R1'});await loadMembers();await loadRanking();
-        }catch(err){status('leadershipMemberStatus','Übergabefehler: '+(err.message||String(err)),true);}
-        finally{transfer.disabled=false;}
-      });
-      actionCell.append(transfer);
-    }
     tr.append(nameCell,rankCell,powerCell,actionCell);body.append(tr);
   });
   if(!(data||[]).length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Keine aktiven Mitglieder gefunden.';tr.append(td);body.append(tr);}
