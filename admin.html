@@ -38,12 +38,12 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 </section>
 <section id="denied" class="card hidden">
 <h2>Zugriff verweigert</h2>
-<p>Dieses Konto besitzt keine ADMIN-Berechtigung. Der Zugang ist ausschließlich dem festgelegten NOX7-ADMIN vorbehalten.</p>
+<p>Dieses Konto besitzt keine Berechtigung für die Allianzverwaltung. Zugriff haben der ADMIN sowie aktive Mitglieder mit Rang R4 oder R5.</p>
 </section>
 <div id="dashboard" class="hidden">
 <section class="grid" id="memberOverview" aria-label="Mitgliederübersicht"><div class="card stat"><div class="eyebrow">AKTIVE MITGLIEDER</div><strong id="countActive">—</strong></div><div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div><div class="card stat"><div class="eyebrow">R1</div><strong id="countR1">—</strong></div><div class="card stat"><div class="eyebrow">R2</div><strong id="countR2">—</strong></div><div class="card stat"><div class="eyebrow">R3</div><strong id="countR3">—</strong></div><div class="card stat"><div class="eyebrow">R4</div><strong id="countR4">—</strong></div><div class="card stat"><div class="eyebrow">R5</div><strong id="countR5">—</strong></div></section>
 <div class="grid">
-<div class="card stat"><div class="eyebrow">SYSTEMROLLE</div><strong>ADMIN</strong><span class="muted">Einziger Systemadministrator</span></div>
+<div class="card stat"><div class="eyebrow">ZUGRIFFSSTUFE</div><strong id="dashboardAccessTitle">ADMIN</strong><span class="muted" id="dashboardAccessDesc">Systemadministrator</span></div>
 <div class="card stat"><div class="eyebrow">ALLIANZ</div><strong>NOX7</strong><span class="muted">Server 1653</span></div>
 </div>
 <section class="card">
@@ -85,7 +85,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <script src="config.js"></script>
 <script>
 const ADMIN_ID = "9cd89136-4682-4e6a-84ba-43c41327fa93";
-let db = null;
+let db = null;\nlet currentAccessRole = "";\nlet currentAccessUserId = "";\nlet currentAccessIsAdmin = false;
 const rankCodes=["R1","R2","R3","R4","R5"];
 let rankLabels={R1:"Rekrut",R2:"Kämpfer",R3:"Veteran",R4:"Offizier",R5:"Allianzführer"};
 const el = id => document.getElementById(id);
@@ -106,16 +106,26 @@ async function start(){
   });
 }
 async function checkAdmin(user){
-  const {data, error}=await db.from("profiles").select("id,role,display_name,game_rank,power").eq("id",user.id).maybeSingle();
+  const {data, error}=await db.from("profiles").select("id,role,display_name,game_rank,power,status").eq("id",user.id).maybeSingle();
   if(error){message("status","Profil konnte nicht geprüft werden: "+error.message,true);return;}
-  if(!data || data.id!==ADMIN_ID || data.role!=="admin"){
-    message("status","Angemeldet, aber keine ADMIN-Berechtigung.",true);show("denied");show("logoutBtn");return;
+  const isAdmin=!!data && data.id===ADMIN_ID && data.role==="admin";
+  const isLeadership=!!data && data.status==="active" && ["R4","R5"].includes(data.game_rank);
+  if(!data || (!isAdmin && !isLeadership)){
+    message("status","Angemeldet, aber keine Berechtigung für die Allianzverwaltung.",true);show("denied");show("logoutBtn");return;
   }
-  message("status","Zugriff bestätigt. Willkommen im NOX7 Command Center.");
+  currentAccessRole=data.game_rank||"";
+  currentAccessUserId=user.id;
+  currentAccessIsAdmin=isAdmin;
+  message("status",isAdmin?"ADMIN-Zugriff bestätigt. Willkommen im NOX7 Command Center.":data.game_rank+"-Zugriff bestätigt. Die verfügbaren Funktionen richten sich nach deinem Allianzrang.");
   show("dashboard");show("logoutBtn");
-  el("adminOwnName").value=data.display_name||"";
-  el("adminOwnPower").value=data.power==null?"":String(data.power);
-  el("adminOwnRank").value=rankCodes.includes(data.game_rank)?data.game_rank:"R5";
+  el("dashboardAccessTitle").textContent=isAdmin?"ADMIN":data.game_rank;
+  el("dashboardAccessDesc").textContent=isAdmin?"Systemadministrator":data.game_rank+" – Allianzführung";
+  ["adminOnlyNews","adminOnlyRankLabels","adminOnlyProfile"].forEach(id=>{if(isAdmin)show(id);else hide(id);});
+  if(isAdmin){
+    el("adminOwnName").value=data.display_name||"";
+    el("adminOwnPower").value=data.power==null?"":String(data.power);
+    el("adminOwnRank").value=rankCodes.includes(data.game_rank)?data.game_rank:"R5";
+  }
   await loadRankLabels();
   await loadMembers();
 }
@@ -187,8 +197,11 @@ async function loadMembers(preserveStatus=false){
     let rank=null;
     if((p.status||"active")==="active"){
       rank=document.createElement("select");rank.setAttribute("aria-label","Allianzrang für "+(p.display_name||"Mitglied"));
-      rankCodes.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+" – "+(rankLabels[v]||v);rank.append(o);});
-      rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";rankCell.append(rank);
+      const allowedRanks=currentAccessIsAdmin?rankCodes:(currentAccessRole==="R5"?["R1","R2","R3","R4"]:["R1","R2","R3"]);
+      rankCodes.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+" – "+(rankLabels[v]||v);o.disabled=!allowedRanks.includes(v);rank.append(o);});
+      rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";
+      if(!currentAccessIsAdmin && p.id===currentAccessUserId){rank.disabled=true;rank.title="Der eigene Allianzrang kann hier nicht geändert werden.";}
+      rankCell.append(rank);
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");
@@ -210,8 +223,11 @@ async function loadMembers(preserveStatus=false){
         edit.disabled=true;
         message("memberStatus","Speichere Name, Spielstärke und Allianzrang für "+newName+" …");
         try{
-          const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:newRank});
-          if(rankError){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message,true);return;}
+          if(newRank!==p.game_rank){
+            if(!currentAccessIsAdmin && p.id===currentAccessUserId){message("memberStatus","Der eigene Allianzrang kann nicht geändert werden.",true);return;}
+            const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:newRank});
+            if(rankError){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message,true);return;}
+          }
           const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
           if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+error.message,true);return;}
           message("memberStatus","Änderungen bestätigt. Prüfe alle drei Werte …");
@@ -226,16 +242,19 @@ async function loadMembers(preserveStatus=false){
         finally{edit.disabled=false;}
       });
       actions.append(edit);
+      if(currentAccessIsAdmin){
       const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
       [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
       const archive=document.createElement("button");archive.type="button";archive.className="btn secondary";archive.textContent="Archivieren";
       archive.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" archivieren?"))return;archive.disabled=true;const {error}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:reason.value});archive.disabled=false;if(error){message("memberStatus","Archivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde archiviert.");await loadMembers();});
       actions.append(reason,archive);
-    }else if((p.status||"active")!=="active"){
+      }
+    }else if((p.status||"active")!=="active" && currentAccessIsAdmin){
       const restore=document.createElement("button");restore.type="button";restore.className="btn secondary";restore.textContent="Reaktivieren";
       restore.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" wieder aktivieren?"))return;restore.disabled=true;const {error}=await db.rpc("reactivate_nox7_member",{p_user_id:p.id});restore.disabled=false;if(error){message("memberStatus","Reaktivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde reaktiviert.");await loadMembers();});
       actions.append(restore);
-    }else actions.textContent="Geschützt";
+    }else if((p.status||"active")!=="active" && !currentAccessIsAdmin) actions.textContent="Nur ADMIN";
+    else actions.textContent="Geschützt";
     tr.append(actions);body.append(tr);
   });
   el("memberCount").textContent=rows.length+" "+(memberView==="active"?"aktive Mitglieder":"archivierte Mitglieder")+" angezeigt.";
