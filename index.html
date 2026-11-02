@@ -51,9 +51,9 @@ function setupLeadershipMemberEditor(profile){
   const panel=document.getElementById('leadershipMemberPanel');
   if(!allowed){panel.classList.add('hidden');return;}
   panel.classList.remove('hidden');
-  loadLeadershipMembers();
+  loadLeadershipMembers(profile);
 }
-async function loadLeadershipMembers(){
+async function loadLeadershipMembers(currentProfile){
   const body=document.getElementById('leadershipMemberRows');
   body.replaceChildren();
   const {data,error}=await supabaseClient.from('profiles').select('id,display_name,game_rank,power,status').eq('status','active').order('display_name',{ascending:true}).limit(500);
@@ -61,7 +61,10 @@ async function loadLeadershipMembers(){
   (data||[]).forEach(p=>{
     const tr=document.createElement('tr'),nameCell=document.createElement('td'),rankCell=document.createElement('td'),powerCell=document.createElement('td'),actionCell=document.createElement('td');
     const name=document.createElement('input');name.value=p.display_name||'';name.maxLength=40;name.setAttribute('aria-label','Spielername');nameCell.append(name);
-    const rank=document.createElement('select');['R1','R2','R3','R4','R5'].forEach(code=>{const option=document.createElement('option');option.value=code;option.textContent=code+' – '+(rankLabels[code]||code);rank.append(option);});rank.value=['R1','R2','R3','R4','R5'].includes(p.game_rank)?p.game_rank:'R1';rankCell.append(rank);
+    const rank=document.createElement('select');['R1','R2','R3','R4','R5'].forEach(code=>{const option=document.createElement('option');option.value=code;option.textContent=code+' – '+(rankLabels[code]||code);rank.append(option);});rank.value=['R1','R2','R3','R4','R5'].includes(p.game_rank)?p.game_rank:'R1';
+    const isOwnR5=currentProfile&&p.id===currentProfile.id&&currentProfile.game_rank==='R5'&&currentProfile.role!=='admin';
+    if(isOwnR5){rank.disabled=true;rank.title='Deinen eigenen R5-Rang kannst du nicht selbst ändern. Dafür ist eine ausdrückliche R5-Übergabe erforderlich.';}
+    rankCell.append(rank);
     const power=document.createElement('input');power.type='number';power.min='0';power.step='1';power.value=p.power==null?'':String(p.power);power.setAttribute('aria-label','Spielstärke');powerCell.append(power);
     const save=document.createElement('button');save.type='button';save.className='btn secondary';save.textContent='Speichern';
     save.addEventListener('click',async()=>{
@@ -78,7 +81,7 @@ async function loadLeadershipMembers(){
         if(checkError){status('leadershipMemberStatus','Gespeichert, aber Prüfung fehlgeschlagen: '+checkError.message,true);return;}
         if(!check||check.display_name!==newName||Number(check.power)!==newPower||check.game_rank!==newRank){status('leadershipMemberStatus','Die gespeicherten Werte stimmen nicht mit den Eingaben überein.',true);return;}
         status('leadershipMemberStatus','ERFOLG: '+newName+' – Name, Spielstärke und Rang wurden gespeichert und geprüft.');
-        await loadLeadershipMembers();await loadMembers();await loadRanking();
+        await loadLeadershipMembers(currentProfile);await loadMembers();await loadRanking();
       }catch(err){status('leadershipMemberStatus','Speicherfehler: '+(err.message||String(err)),true);}
       finally{save.disabled=false;}
     });
