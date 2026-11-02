@@ -67,7 +67,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <p class="muted">Allianzrang verwalten, Mitglieder archivieren und frühere Mitglieder reaktivieren. Systemrollen (ADMIN/R4/R5) werden hier nicht verändert.</p>
 <div class="actions"><button class="btn secondary" id="showActive" type="button">Aktive Mitglieder</button><button class="btn secondary" id="showArchived" type="button">Archiv</button></div>
 <div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Status</th><th>Allianzrang</th><th>Spielstärke</th><th>Aktionen</th></tr></thead><tbody id="memberRows"><tr><td colspan="5">Wird geladen …</td></tr></tbody></table></div>
-<div id="memberStatus" class="muted"></div>
+<div id="memberCount" class="muted" aria-live="polite"></div><div id="memberStatus" class="notice" role="status" aria-live="polite">Bereit für Änderungen.</div>
 </section>
 </div>
 </main>
@@ -134,7 +134,7 @@ async function loadMembers(preserveStatus=false){
   el("countArchived").textContent=all.filter(p=>(p.status||"active")!=="active").length;
   rankCodes.forEach(code=>{el("count"+code).textContent=active.filter(p=>p.game_rank===code).length;});
   const rows=all.filter(p=>(p.status||"active")===memberView);
-  if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent=memberView==="active"?"Keine aktiven Mitglieder vorhanden.":"Das Archiv ist leer.";tr.append(td);body.append(tr);el("memberStatus").textContent="0 Profile.";return;}
+  if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent=memberView==="active"?"Keine aktiven Mitglieder vorhanden.":"Das Archiv ist leer.";tr.append(td);body.append(tr);el("memberCount").textContent="0 Profile.";return;}
   rows.forEach(p=>{
     const tr=document.createElement("tr");
     const name=document.createElement("td");
@@ -168,11 +168,20 @@ async function loadMembers(preserveStatus=false){
         if(newName.length<2||newName.length>40){message("memberStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
         if(rawPower===""||!Number.isSafeInteger(newPower)||newPower<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
         edit.disabled=true;
-        const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
-        edit.disabled=false;
-        if(error){message("memberStatus","Mitgliedsdaten konnten nicht gespeichert werden: "+error.message,true);return;}
-        await loadMembers(true);
-        message("memberStatus","Erfolgreich gespeichert: Name und Spielstärke von "+newName+" wurden aktualisiert.");
+        message("memberStatus","Speichere Name und Spielstärke für "+newName+" …");
+        try{
+          const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
+          if(error){message("memberStatus","FEHLER beim Speichern: "+error.message,true);return;}
+          message("memberStatus","Änderung von Supabase bestätigt. Prüfe gespeicherten Wert …");
+          await loadMembers();
+          const {data:check,error:checkError}=await db.from("profiles").select("display_name,power").eq("id",p.id).maybeSingle();
+          if(checkError){message("memberStatus","Änderung gesendet, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
+          if(!check || Number(check.power)!==newPower || check.display_name!==newName){
+            message("memberStatus","NICHT korrekt gespeichert. Datenbankwert: Name="+(check?.display_name||"unbekannt")+", Power="+(check?.power??"leer")+". Bitte Supabase-RPC und Datenbank prüfen.",true);return;
+          }
+          message("memberStatus","ERFOLG: "+newName+" – Spielstärke "+newPower.toLocaleString("de-AT")+" wurde gespeichert und geprüft.");
+        }catch(err){message("memberStatus","Unerwarteter Speicherfehler: "+(err.message||String(err)),true);}
+        finally{edit.disabled=false;}
       });
       actions.append(edit);
       const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
@@ -187,7 +196,7 @@ async function loadMembers(preserveStatus=false){
     }else actions.textContent="Geschützt";
     tr.append(actions);body.append(tr);
   });
-  if(!preserveStatus)el("memberStatus").textContent=rows.length+" "+(memberView==="active"?"aktive Mitglieder":"archivierte Mitglieder")+" angezeigt.";
+  el("memberCount").textContent=rows.length+" "+(memberView==="active"?"aktive Mitglieder":"archivierte Mitglieder")+" angezeigt.";
 }
 el("showActive").addEventListener("click",()=>{memberView="active";loadMembers();});
 el("showArchived").addEventListener("click",()=>{memberView="archived";loadMembers();});
