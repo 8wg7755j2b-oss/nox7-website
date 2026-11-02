@@ -22,7 +22,15 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.badge{display:inline-block;border:1px solid #3d7189;border-radius:30px;padding:3px 9px;font-size:11px;color:#a8efff}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.wrap{padding:18px 14px}}
 .admin-shortcuts{position:fixed;left:max(12px,calc((100vw - 1450px)/2));top:150px;z-index:30;display:flex;flex-direction:column;align-items:stretch;gap:8px;width:190px;max-height:calc(100vh - 170px);overflow-y:auto;padding:12px;margin:0;background:#0c1728ed;border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(10px)}.admin-shortcuts a{display:block;padding:10px 12px;border:1px solid #3b5877;border-radius:8px;background:#14243a;color:var(--white);text-decoration:none;font-size:14px;font-weight:700;white-space:normal}.admin-shortcuts a:hover{border-color:var(--cyan);color:var(--cyan)}#dashboard{padding-left:210px}#memberOverview,#adminRanking,#adminOnlyNews,#adminOnlyRankLabels,#adminOnlyProfile,#memberManagement,#manualStatsPanel{scroll-margin-top:24px}@media(max-width:900px){#dashboard{padding-left:0}.admin-shortcuts{position:sticky;top:8px;left:auto;width:auto;max-height:none;flex-direction:row;flex-wrap:wrap;margin:14px 0 20px;padding:10px}.admin-shortcuts a{display:inline-block;padding:8px 13px;white-space:nowrap}#memberOverview,#adminRanking,#adminOnlyNews,#adminOnlyRankLabels,#adminOnlyProfile,#memberManagement,#manualStatsPanel{scroll-margin-top:90px}}
-.member-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.member-tab{background:#17263c;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:9px 18px;cursor:pointer;font-weight:650}.member-tab:hover{border-color:var(--cyan);color:var(--white)}.member-tab.active{background:#17394a;border-color:var(--cyan);color:var(--white);box-shadow:inset 0 -2px 0 var(--cyan)}</style>
+.member-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.member-tab{background:#17263c;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:9px 18px;cursor:pointer;font-weight:650}.member-tab:hover{border-color:var(--cyan);color:var(--white)}.member-tab.active{background:#17394a;border-color:var(--cyan);color:var(--white);box-shadow:inset 0 -2px 0 var(--cyan)}body[data-admin-page="overview"] #adminRanking,body[data-admin-page="overview"] #adminOnlyNews,body[data-admin-page="overview"] #adminOnlyRankLabels,body[data-admin-page="overview"] #adminOnlyProfile,body[data-admin-page="overview"] #memberManagement{display:none!important}
+body[data-admin-page="ranking"] #memberOverview,body[data-admin-page="ranking"] #adminOnlyNews,body[data-admin-page="ranking"] #adminOnlyRankLabels,body[data-admin-page="ranking"] #adminOnlyProfile,body[data-admin-page="ranking"] #memberManagement{display:none!important}
+body[data-admin-page="members"] #memberOverview,body[data-admin-page="members"] #adminRanking,body[data-admin-page="members"] #adminOnlyNews,body[data-admin-page="members"] #adminOnlyRankLabels,body[data-admin-page="members"] #adminOnlyProfile{display:none!important}
+body[data-admin-page="members"] #memberManagement>#manualStatsPanel{display:none!important}
+body[data-admin-page="stats"] #memberOverview,body[data-admin-page="stats"] #adminRanking,body[data-admin-page="stats"] #adminOnlyNews,body[data-admin-page="stats"] #adminOnlyRankLabels,body[data-admin-page="stats"] #adminOnlyProfile{display:none!important}
+body[data-admin-page="stats"] #memberManagement>*:not(#manualStatsPanel){display:none!important}
+body[data-admin-page="news"] #memberOverview,body[data-admin-page="news"] #adminRanking,body[data-admin-page="news"] #adminOnlyRankLabels,body[data-admin-page="news"] #adminOnlyProfile,body[data-admin-page="news"] #memberManagement{display:none!important}
+body[data-admin-page="ranks"] #memberOverview,body[data-admin-page="ranks"] #adminRanking,body[data-admin-page="ranks"] #adminOnlyNews,body[data-admin-page="ranks"] #adminOnlyProfile,body[data-admin-page="ranks"] #memberManagement{display:none!important}
+body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] #adminRanking,body[data-admin-page="profile"] #adminOnlyNews,body[data-admin-page="profile"] #adminOnlyRankLabels,body[data-admin-page="profile"] #memberManagement{display:none!important}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -47,13 +55,13 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <div class="card stat"><div class="eyebrow">ALLIANZ</div><strong>NOX7</strong><span class="muted">Server 1653</span></div>
 </div>
 <nav class="admin-shortcuts" aria-label="Schnellnavigation">
-<a href="#memberOverview">Übersicht</a>
-<a href="#adminOnlyNews" id="shortcutNews" class="hidden">News & Events</a>
-<a href="#adminOnlyRankLabels" id="shortcutRanks" class="hidden">Rangbezeichnungen</a>
-<a href="#adminOnlyProfile" id="shortcutProfile" class="hidden">ADMIN-Profil</a>
-<a href="#adminRanking" id="shortcutRanking">Rangliste</a>
-<a href="#memberManagement">Mitglieder</a>
-<a href="#manualStatsPanel" id="shortcutStats">VS & Spenden</a>
+<a href="admin.html?page=overview">Übersicht</a>
+<a href="admin.html?page=news" id="shortcutNews" class="hidden">News & Events</a>
+<a href="admin.html?page=ranks" id="shortcutRanks" class="hidden">Rangbezeichnungen</a>
+<a href="admin.html?page=profile" id="shortcutProfile" class="hidden">ADMIN-Profil</a>
+<a href="admin.html?page=ranking" id="shortcutRanking">Rangliste</a>
+<a href="admin.html?page=members">Mitglieder</a>
+<a href="admin.html?page=stats" id="shortcutStats">VS & Spenden</a>
 </nav>
 <section class="grid" id="memberOverview" aria-label="Mitgliederübersicht" style="grid-template-columns:repeat(2,minmax(0,1fr))">
 <div class="card stat"><div class="eyebrow">MITGLIEDERPLÄTZE</div><strong id="countActive">— / 100</strong><div style="height:10px;background:var(--line,#e5e7eb);border-radius:99px;overflow:hidden;margin-top:12px"><div id="activeMemberProgress" style="height:100%;width:0%;background:#16a34a;border-radius:99px;transition:width .25s"></div></div><span class="muted" id="activeMemberCapacityText">0 von 100 Plätzen belegt</span></div>
@@ -493,6 +501,11 @@ el("newsForm").addEventListener("submit",async event=>{
   event.target.reset();message("newsStatus","Beitrag wurde veröffentlicht.");
 });
 el("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();window.location.href="index.html#account";});
+const adminPageNames={overview:"Übersicht",ranking:"Rangliste",members:"Mitgliederverwaltung",stats:"VS & Spenden",news:"News & Events",ranks:"Rangbezeichnungen",profile:"ADMIN-Profil"};
+const requestedAdminPage=new URLSearchParams(window.location.search).get("page")||"overview";
+document.body.dataset.adminPage=Object.prototype.hasOwnProperty.call(adminPageNames,requestedAdminPage)?requestedAdminPage:"overview";
+const adminPageHeading=document.querySelector("main h1");
+if(adminPageHeading)adminPageHeading.textContent="ADMIN · "+adminPageNames[document.body.dataset.adminPage].toUpperCase();
 start();
 </script>
 </body>
