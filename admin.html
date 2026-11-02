@@ -268,31 +268,13 @@ async function loadMembers(preserveStatus=false){
     const power=document.createElement("td");
     if((p.status||"active")==="active" && true){
       const powerInput=document.createElement("input");powerInput.type="number";powerInput.min="0";powerInput.step="1";powerInput.value=p.power==null?"":String(p.power);powerInput.placeholder="Spielstärke";powerInput.setAttribute("aria-label","Spielstärke bearbeiten");powerInput.style.minWidth="125px";power.append(powerInput);power._powerInput=powerInput;
-      const savePower=document.createElement("button");savePower.type="button";savePower.className="btn secondary";savePower.textContent="Spielstärke speichern";savePower.style.marginTop="6px";
-      savePower.addEventListener("click",async()=>{
-        const raw=powerInput.value.trim(),value=Number(raw);
-        if(raw===""||!Number.isSafeInteger(value)||value<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
-        if(!confirm( "Spielstärke von "+(p.display_name||"Mitglied")+" auf "+value.toLocaleString("de-AT")+" setzen?"))return;
-        savePower.disabled=true;message("memberStatus","Speichere Spielstärke …");
-        try{
-          const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:name._nameInput?.value.trim()||p.display_name||"Mitglied",p_power:value});
-          if(error){message("memberStatus", "Spielstärke konnte nicht gespeichert werden: "+error.message,true);return;}
-          const {data:check,error:checkError}=await db.from("profiles").select("power").eq("id",p.id).maybeSingle();
-          if(checkError){message("memberStatus","Gespeichert, Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
-          if(!check||Number(check.power)!==value){message("memberStatus","Spielstärke wurde nicht korrekt übernommen. Datenbankwert: "+(check?.power??"unbekannt"),true);return;}
-          message("memberStatus", "ERFOLG: Spielstärke wurde auf "+value.toLocaleString("de-AT")+" gesetzt.");
-          await loadMembers(true);
-        }catch(err){message("memberStatus","Speichern fehlgeschlagen: "+(err.message||String(err)),true);}
-        finally{savePower.disabled=false;}
-      });
-      power.append(savePower);
     }else power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");
     tr.append(power);
     const actions=document.createElement("td");
-    if((p.status||"active")==="active" && p.id!==ADMIN_ID){
-      const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Alles speichern";
+    if((p.status||"active")==="active"){
+      const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Speichern";
       edit.addEventListener("click",async()=>{
-        const newName=name._nameInput?.value.trim()||"";
+        const newName=name._nameInput?.value.trim()||p.display_name||"Sturmklingen General";
         const rawPower=power._powerInput?.value.trim()||"";
         const newPower=Number(rawPower);
         const newRank=rank.value;
