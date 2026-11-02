@@ -41,6 +41,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <p>Dieses Konto besitzt keine ADMIN-Berechtigung. Der Zugang ist ausschließlich dem festgelegten NOX7-ADMIN vorbehalten.</p>
 </section>
 <div id="dashboard" class="hidden">
+<section class="grid" id="memberOverview" aria-label="Mitgliederübersicht"><div class="card stat"><div class="eyebrow">AKTIVE MITGLIEDER</div><strong id="countActive">—</strong></div><div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div><div class="card stat"><div class="eyebrow">R4</div><strong id="countR4">—</strong></div><div class="card stat"><div class="eyebrow">R5</div><strong id="countR5">—</strong></div><div class="card stat"><div class="eyebrow">MITGLIED</div><strong id="countMember">—</strong></div></section>
 <div class="grid">
 <div class="card stat"><div class="eyebrow">SYSTEMROLLE</div><strong>ADMIN</strong><span class="muted">Einziger Systemadministrator</span></div>
 <div class="card stat"><div class="eyebrow">ALLIANZ</div><strong>NOX7</strong><span class="muted">Server 1653</span></div>
@@ -99,7 +100,14 @@ async function loadMembers(){
   const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
   const body=el("memberRows");body.replaceChildren();
   if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Mitglieder konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);message("memberStatus","Mitglieder konnten nicht geladen werden: "+error.message,true);return;}
-  const rows=(data||[]).filter(p=>(p.status||"active")===memberView);
+  const all=data||[];
+  const active=all.filter(p=>(p.status||"active")==="active");
+  el("countActive").textContent=active.length;
+  el("countArchived").textContent=all.filter(p=>(p.status||"active")!=="active").length;
+  el("countR4").textContent=active.filter(p=>p.game_rank==="R4").length;
+  el("countR5").textContent=active.filter(p=>p.game_rank==="R5").length;
+  el("countMember").textContent=active.filter(p=>(p.game_rank||"Mitglied")==="Mitglied").length;
+  const rows=all.filter(p=>(p.status||"active")===memberView);
   if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent=memberView==="active"?"Keine aktiven Mitglieder vorhanden.":"Das Archiv ist leer.";tr.append(td);body.append(tr);el("memberStatus").textContent="0 Profile.";return;}
   rows.forEach(p=>{
     const tr=document.createElement("tr");
