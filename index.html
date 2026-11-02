@@ -26,6 +26,7 @@
 <div id="authBox" class="card panel hidden"><div class="formgrid"><div class="full"><label for="email">E-Mail-Adresse</label><input id="email" type="email" autocomplete="email" placeholder="name@beispiel.at"></div><div class="full"><label for="password">Passwort (mind. 8 Zeichen empfohlen)</label><input id="password" type="password" autocomplete="current-password" placeholder="Passwort"></div></div><div class="actions"><button class="btn" onclick="signIn()">Anmelden</button><button class="btn secondary" onclick="signUp()">Konto erstellen</button><button class="btn secondary" onclick="resetPassword()">Passwort vergessen</button></div><div id="authStatus"></div></div>
 <div id="profileBox" class="card panel hidden"><div class="row"><div><div class="eyebrow">ANGEMELDET</div><h3 id="welcome"></h3></div><button class="btn secondary" onclick="signOut()">Abmelden</button></div><form id="profileForm"><label>Öffentlicher Spielername</label><input id="displayName" maxlength="40" placeholder="Spielername"><label for="playerPower">Deine Spielstärke (Power)</label><input id="playerPower" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 85000000"><small class="muted">Trage deine aktuelle Spielstärke ein und halte sie selbst aktuell.</small><label>Dein Allianzrang</label><div id="gameRankDisplay" class="notice">Wird geladen …</div><small class="muted">Dein Allianzrang wird von der Allianzführung verwaltet.</small><br><button class="btn">Profil speichern</button></form><div id="profileStatus"></div>
 <div id="rankLabelPanel" class="hidden"><hr style="border-color:var(--line);margin:25px 0"><div class="eyebrow">LEADERSHIP</div><h3>Rangbezeichnungen verwalten</h3><p class="muted" id="rankLabelPermission"></p><div id="publicRankLabelFields" class="formgrid"></div><button class="btn" id="savePublicRankLabels" type="button">Freigegebene Bezeichnungen speichern</button><div id="publicRankLabelStatus"></div></div>
+<div id="leadershipMemberPanel" class="hidden"><hr style="border-color:var(--line);margin:25px 0"><div class="eyebrow">LEADERSHIP</div><h3>Mitgliederverwaltung</h3><p class="muted">R4/R5 und ADMIN können Spielernamen, Spielstärke und Allianzrang aktiver Mitglieder bearbeiten. Die Systemrolle ADMIN wird hier nicht angezeigt und kann nicht geändert werden.</p><div style="overflow-x:auto"><table><thead><tr><th>Spieler</th><th>Allianzrang</th><th>Spielstärke</th><th>Aktion</th></tr></thead><tbody id="leadershipMemberRows"><tr><td colspan="4">Wird geladen …</td></tr></tbody></table></div><div id="leadershipMemberStatus" aria-live="polite"></div></div>
 <div id="adminPanel" class="hidden"><hr style="border-color:var(--line);margin:25px 0"><div class="eyebrow">COMMAND CENTER</div><h3>Admin – News veröffentlichen</h3><form id="newsForm"><input id="newsTitle" required placeholder="Überschrift"><textarea id="newsBody" required placeholder="Meldung / Eventdetails"></textarea><select id="newsType"><option value="news">News</option><option value="event">Event</option></select><button class="btn">Veröffentlichen</button></form><div id="adminStatus"></div></div></div></div></section>
 </main><footer><div class="wrap row"><span>© 2026 NOX7 · Server 1653</span><span>UNITED IN THE SHADOWS</span></div></footer>
 <script src="config.js?v=fix1"></script>
@@ -44,7 +45,47 @@ async function signIn(){if(!requireConfig())return;const {error}=await supabaseC
 async function resetPassword(){if(!requireConfig())return;const email=document.getElementById('email').value.trim();if(!email){status('authStatus','Bitte zuerst deine E-Mail-Adresse eingeben.',true);return}const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin});status('authStatus',error?error.message:'Falls ein Konto existiert, erhältst du eine E-Mail zum Zurücksetzen.')}
 async function signOut(){await supabaseClient.auth.signOut()}
 function hideProfile(){currentUser=null;document.getElementById('profileBox').classList.add('hidden');document.getElementById('authBox').classList.remove('hidden')}
-async function showProfile(user){currentUser=user;document.getElementById('authBox').classList.add('hidden');document.getElementById('profileBox').classList.remove('hidden');document.getElementById('welcome').textContent=user.email;const {data,error}=await supabaseClient.from('profiles').select('display_name,game_rank,role,power').eq('id',user.id).maybeSingle();if(error){status('profileStatus','Profil konnte nicht geladen werden: '+error.message,true);return}if(data){document.getElementById('displayName').value=data.display_name||'';document.getElementById('playerPower').value=data.power==null?'':String(data.power);document.getElementById('gameRankDisplay').textContent=rankLabels[data.game_rank]||data.game_rank||'Rekrut';if(['admin','r5','r4'].includes(data.role))document.getElementById('adminPanel').classList.remove('hidden');else document.getElementById('adminPanel').classList.add('hidden');setupRankLabelEditor(data);}} 
+async function showProfile(user){currentUser=user;document.getElementById('authBox').classList.add('hidden');document.getElementById('profileBox').classList.remove('hidden');document.getElementById('welcome').textContent=user.email;const {data,error}=await supabaseClient.from('profiles').select('display_name,game_rank,role,power').eq('id',user.id).maybeSingle();if(error){status('profileStatus','Profil konnte nicht geladen werden: '+error.message,true);return}if(data){document.getElementById('displayName').value=data.display_name||'';document.getElementById('playerPower').value=data.power==null?'':String(data.power);document.getElementById('gameRankDisplay').textContent=rankLabels[data.game_rank]||data.game_rank||'Rekrut';if(['admin','r5','r4'].includes(data.role))document.getElementById('adminPanel').classList.remove('hidden');else document.getElementById('adminPanel').classList.add('hidden');setupRankLabelEditor(data);setupLeadershipMemberEditor({...data,id:user.id});}} 
+function setupLeadershipMemberEditor(profile){
+  const allowed=profile.id===ADMIN_ID&&profile.role==='admin'||profile.game_rank==='R4'||profile.game_rank==='R5';
+  const panel=document.getElementById('leadershipMemberPanel');
+  if(!allowed){panel.classList.add('hidden');return;}
+  panel.classList.remove('hidden');
+  loadLeadershipMembers();
+}
+async function loadLeadershipMembers(){
+  const body=document.getElementById('leadershipMemberRows');
+  body.replaceChildren();
+  const {data,error}=await supabaseClient.from('profiles').select('id,display_name,game_rank,power,status').eq('status','active').order('display_name',{ascending:true}).limit(500);
+  if(error){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Mitglieder konnten nicht geladen werden: '+error.message;tr.append(td);body.append(tr);status('leadershipMemberStatus','Laden fehlgeschlagen: '+error.message,true);return;}
+  (data||[]).forEach(p=>{
+    const tr=document.createElement('tr'),nameCell=document.createElement('td'),rankCell=document.createElement('td'),powerCell=document.createElement('td'),actionCell=document.createElement('td');
+    const name=document.createElement('input');name.value=p.display_name||'';name.maxLength=40;name.setAttribute('aria-label','Spielername');nameCell.append(name);
+    const rank=document.createElement('select');['R1','R2','R3','R4','R5'].forEach(code=>{const option=document.createElement('option');option.value=code;option.textContent=code+' – '+(rankLabels[code]||code);rank.append(option);});rank.value=['R1','R2','R3','R4','R5'].includes(p.game_rank)?p.game_rank:'R1';rankCell.append(rank);
+    const power=document.createElement('input');power.type='number';power.min='0';power.step='1';power.value=p.power==null?'':String(p.power);power.setAttribute('aria-label','Spielstärke');powerCell.append(power);
+    const save=document.createElement('button');save.type='button';save.className='btn secondary';save.textContent='Speichern';
+    save.addEventListener('click',async()=>{
+      const newName=name.value.trim(),rawPower=power.value.trim(),newPower=Number(rawPower),newRank=rank.value;
+      if(newName.length<2||newName.length>40){status('leadershipMemberStatus','Spielername muss 2 bis 40 Zeichen haben.',true);return;}
+      if(rawPower===''||!Number.isSafeInteger(newPower)||newPower<0){status('leadershipMemberStatus','Bitte eine gültige Spielstärke ab 0 eingeben.',true);return;}
+      save.disabled=true;status('leadershipMemberStatus','Speichere '+newName+' …');
+      try{
+        const {error:rankError}=await supabaseClient.rpc('set_nox7_game_rank',{p_user_id:p.id,p_game_rank:newRank});
+        if(rankError){status('leadershipMemberStatus','Allianzrang konnte nicht gespeichert werden: '+rankError.message,true);return;}
+        const {error:detailsError}=await supabaseClient.rpc('update_nox7_member_details',{p_user_id:p.id,p_display_name:newName,p_power:newPower});
+        if(detailsError){status('leadershipMemberStatus','Rang wurde gespeichert, aber Name/Spielstärke nicht: '+detailsError.message,true);return;}
+        const {data:check,error:checkError}=await supabaseClient.from('profiles').select('display_name,power,game_rank').eq('id',p.id).maybeSingle();
+        if(checkError){status('leadershipMemberStatus','Gespeichert, aber Prüfung fehlgeschlagen: '+checkError.message,true);return;}
+        if(!check||check.display_name!==newName||Number(check.power)!==newPower||check.game_rank!==newRank){status('leadershipMemberStatus','Die gespeicherten Werte stimmen nicht mit den Eingaben überein.',true);return;}
+        status('leadershipMemberStatus','ERFOLG: '+newName+' – Name, Spielstärke und Rang wurden gespeichert und geprüft.');
+        await loadLeadershipMembers();await loadMembers();await loadRanking();
+      }catch(err){status('leadershipMemberStatus','Speicherfehler: '+(err.message||String(err)),true);}
+      finally{save.disabled=false;}
+    });
+    actionCell.append(save);tr.append(nameCell,rankCell,powerCell,actionCell);body.append(tr);
+  });
+  if(!(data||[]).length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Keine aktiven Mitglieder gefunden.';tr.append(td);body.append(tr);}
+}
 function setupRankLabelEditor(profile){
   const allowed=profile.role==='admin'||profile.id===ADMIN_ID?['R1','R2','R3','R4','R5']:profile.game_rank==='R5'?['R1','R2','R3','R4']:profile.game_rank==='R4'?['R1','R2','R3']:[];
   const panel=document.getElementById('rankLabelPanel'),fields=document.getElementById('publicRankLabelFields');
