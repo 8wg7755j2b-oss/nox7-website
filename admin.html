@@ -63,6 +63,17 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <div id="rankLabelStatus" aria-live="polite"></div>
 </section>
 <section class="card">
+<div class="eyebrow">ADMIN PROFILE</div><h2>Eigenes ADMIN-Profil</h2>
+<p class="muted">Hier kannst du deinen eigenen Spielernamen, deine Spielstärke und deinen Allianzrang ändern. Deine Systemrolle ADMIN bleibt geschützt.</p>
+<div class="grid">
+<div><label for="adminOwnName">Spielername</label><input id="adminOwnName" maxlength="40" autocomplete="off"></div>
+<div><label for="adminOwnPower">Spielstärke</label><input id="adminOwnPower" type="number" min="0" step="1"></div>
+<div><label for="adminOwnRank">Allianzrang</label><select id="adminOwnRank"><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option></select></div>
+</div>
+<button class="btn" id="saveOwnAdminProfile" type="button">Eigenes Profil speichern</button>
+<div id="ownAdminStatus" aria-live="polite"></div>
+</section>
+<section class="card">
 <div class="eyebrow">PERSONNEL</div><h2>Mitgliederverwaltung</h2>
 <p class="muted">Allianzrang verwalten, Mitglieder archivieren und frühere Mitglieder reaktivieren. Systemrollen (ADMIN/R4/R5) werden hier nicht verändert.</p>
 <div class="actions"><button class="btn secondary" id="showActive" type="button">Aktive Mitglieder</button><button class="btn secondary" id="showArchived" type="button">Archiv</button></div>
@@ -95,13 +106,16 @@ async function start(){
   });
 }
 async function checkAdmin(user){
-  const {data, error}=await db.from("profiles").select("id,role,display_name").eq("id",user.id).maybeSingle();
+  const {data, error}=await db.from("profiles").select("id,role,display_name,game_rank,power").eq("id",user.id).maybeSingle();
   if(error){message("status","Profil konnte nicht geprüft werden: "+error.message,true);return;}
   if(!data || data.id!==ADMIN_ID || data.role!=="admin"){
     message("status","Angemeldet, aber keine ADMIN-Berechtigung.",true);show("denied");show("logoutBtn");return;
   }
   message("status","Zugriff bestätigt. Willkommen im NOX7 Command Center.");
   show("dashboard");show("logoutBtn");
+  el("adminOwnName").value=data.display_name||"";
+  el("adminOwnPower").value=data.power==null?"":String(data.power);
+  el("adminOwnRank").value=rankCodes.includes(data.game_rank)?data.game_rank:"R5";
   await loadRankLabels();
   await loadMembers();
 }
@@ -122,6 +136,32 @@ el("saveRankLabels").addEventListener("click",async()=>{
     rankLabels[code]=label;
   }
   button.disabled=false;message("rankLabelStatus","Alle fünf Rangbezeichnungen wurden gespeichert.");
+});
+el("saveOwnAdminProfile").addEventListener("click",async()=>{
+  const button=el("saveOwnAdminProfile");
+  const newName=el("adminOwnName").value.trim();
+  const rawPower=el("adminOwnPower").value.trim();
+  const newPower=Number(rawPower);
+  const newRank=el("adminOwnRank").value;
+  if(newName.length<2||newName.length>40){message("ownAdminStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
+  if(rawPower===""||!Number.isSafeInteger(newPower)||newPower<0){message("ownAdminStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
+  if(!rankCodes.includes(newRank)){message("ownAdminStatus","Bitte einen gültigen Allianzrang wählen.",true);return;}
+  button.disabled=true;
+  message("ownAdminStatus","Speichere eigenes ADMIN-Profil …");
+  try{
+    const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:ADMIN_ID,p_game_rank:newRank});
+    if(rankError){message("ownAdminStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message+". Name und Spielstärke wurden noch nicht geändert.",true);return;}
+    const {error:profileError}=await db.from("profiles").update({display_name:newName,power:newPower}).eq("id",ADMIN_ID);
+    if(profileError){message("ownAdminStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileError.message,true);return;}
+    const {data:check,error:checkError}=await db.from("profiles").select("display_name,power,game_rank,role").eq("id",ADMIN_ID).maybeSingle();
+    if(checkError){message("ownAdminStatus","Gespeichert, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
+    if(!check||check.display_name!==newName||Number(check.power)!==newPower||check.game_rank!==newRank||check.role!=="admin"){
+      message("ownAdminStatus","Die Kontrolle stimmt nicht mit den Eingaben überein. Datenbank: "+JSON.stringify(check),true);return;
+    }
+    message("ownAdminStatus","ERFOLG: Name, Spielstärke und Allianzrang wurden gespeichert. Systemrolle ADMIN ist unverändert.");
+    await loadMembers();
+  }catch(err){message("ownAdminStatus","Speicherfehler: "+(err.message||String(err)),true);}
+  finally{button.disabled=false;}
 });
 let memberView="active";
 async function loadMembers(preserveStatus=false){
