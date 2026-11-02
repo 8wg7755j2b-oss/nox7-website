@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d18">
+<title>NOX7 — Admin Command Center</title>
+<style>
+:root{--bg:#080d18;--panel:#111c2e;--line:#293b56;--cyan:#62e7ff;--gold:#e9c16f;--muted:#9cacc3;--white:#f3f7ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% -15%,#1c345a 0,transparent 40%),var(--bg);color:var(--white);font:16px/1.55 system-ui,Segoe UI,Arial,sans-serif}
+a{color:var(--cyan)}button,input,textarea,select{font:inherit}.wrap{max-width:1120px;margin:auto;padding:24px 18px}
+header{border-bottom:1px solid var(--line);background:#080d18ed}.top{max-width:1120px;margin:auto;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{font-size:24px;font-weight:1000;letter-spacing:.15em;color:white;text-decoration:none}.logo span{color:var(--cyan)}
+.btn{background:linear-gradient(120deg,#15506a,#2a477d);border:1px solid #3b6d8b;border-radius:8px;padding:10px 15px;color:white;font-weight:750;cursor:pointer;text-decoration:none;display:inline-block}.btn.secondary{background:transparent;border-color:#4a5c77}
+.card{background:linear-gradient(145deg,#142239,#0d1626);border:1px solid var(--line);border-radius:13px;padding:20px;margin:14px 0}
+.eyebrow{color:var(--cyan);font-size:12px;font-weight:850;letter-spacing:.2em}.muted,small{color:var(--muted)}
+h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:8px 0 12px}h2{margin:5px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.stat strong{display:block;color:var(--cyan);font-size:28px}
+label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:100%;background:#080f1c;border:1px solid #344862;border-radius:8px;color:white;padding:11px;margin:5px 0 12px}textarea{min-height:110px;resize:vertical}
+.notice{padding:12px;background:#12313a;border:1px solid #24606a;border-radius:8px;color:#b7f5ed;margin:12px 0}.error{background:#381d27;border-color:#754050;color:#ffd2dc}
+.hidden{display:none!important}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:480px}td,th{text-align:left;padding:11px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.badge{display:inline-block;border:1px solid #3d7189;border-radius:30px;padding:3px 9px;font-size:11px;color:#a8efff}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.wrap{padding:18px 14px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header><div class="top"><a class="logo" href="index.html">NOX<span>7</span></a><div class="actions"><a class="btn secondary" href="index.html">Öffentliche Website</a><button class="btn secondary hidden" id="logoutBtn">Abmelden</button></div></div></header>
+<main class="wrap">
+<div class="eyebrow">LAST WAR · ALLIANCE 1653</div>
+<h1>ADMIN COMMAND CENTER</h1>
+<p class="muted">UNITED IN THE SHADOWS · Geschützter Verwaltungsbereich</p>
+<div id="status" class="notice">Verbindung wird geprüft …</div>
+<section id="loginHelp" class="card hidden">
+<h2>Anmeldung erforderlich</h2>
+<p class="muted">Bitte melde dich zuerst auf der öffentlichen NOX7-Website an. Danach kannst du dieses Fenster erneut öffnen.</p>
+<a class="btn" href="index.html#account">Zum Mitglieder-Login</a>
+</section>
+<section id="denied" class="card hidden">
+<h2>Zugriff verweigert</h2>
+<p>Dieses Konto besitzt keine ADMIN-Berechtigung. Der Zugang ist ausschließlich dem festgelegten NOX7-ADMIN vorbehalten.</p>
+</section>
+<div id="dashboard" class="hidden">
+<div class="grid">
+<div class="card stat"><div class="eyebrow">SYSTEMROLLE</div><strong>ADMIN</strong><span class="muted">Einziger Systemadministrator</span></div>
+<div class="card stat"><div class="eyebrow">ALLIANZ</div><strong>NOX7</strong><span class="muted">Server 1653</span></div>
+</div>
+<section class="card">
+<div class="eyebrow">TRANSMISSION</div><h2>News & Events veröffentlichen</h2>
+<form id="newsForm">
+<label for="newsTitle">Überschrift</label><input id="newsTitle" maxlength="120" required placeholder="Titel der Meldung">
+<label for="newsBody">Meldung / Eventdetails</label><textarea id="newsBody" maxlength="5000" required placeholder="Was sollen die Mitglieder wissen?"></textarea>
+<label for="newsType">Beitragstyp</label><select id="newsType"><option value="news">Allianz-News</option><option value="event">Event</option></select>
+<button class="btn" type="submit">Veröffentlichen</button>
+</form><div id="newsStatus" aria-live="polite"></div>
+</section>
+<section class="card">
+<div class="eyebrow">PERSONNEL</div><h2>Mitgliederübersicht</h2>
+<p class="muted">Diese erste Version zeigt vorhandene Profile nur an. Änderungen an Rollen oder Berechtigungen sind bewusst nicht über diese Seite möglich.</p>
+<div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Allianzrang</th><th>Spielstärke</th></tr></thead><tbody id="memberRows"><tr><td colspan="3">Wird geladen …</td></tr></tbody></table></div>
+<div id="memberStatus" class="muted"></div>
+</section>
+</div>
+</main>
+<script src="config.js"></script>
+<script>
+const ADMIN_ID = "9cd89136-4682-4e6a-84ba-43c41327fa93";
+let db = null;
+const el = id => document.getElementById(id);
+function message(id, text, error=false){const node=el(id);node.textContent=text;node.className=error?"notice error":"notice";}
+function show(id){el(id).classList.remove("hidden");}
+function hide(id){el(id).classList.add("hidden");}
+async function start(){
+  if(!window.NOX7_CONFIG || !window.NOX7_CONFIG.url || !window.NOX7_CONFIG.anonKey || !window.supabase){
+    message("status","Supabase-Konfiguration fehlt. Bitte config.js prüfen.",true);return;
+  }
+  db=window.supabase.createClient(window.NOX7_CONFIG.url,window.NOX7_CONFIG.anonKey);
+  const {data:{session},error}=await db.auth.getSession();
+  if(error){message("status","Anmeldestatus konnte nicht geprüft werden: "+error.message,true);return;}
+  if(!session){message("status","Du bist nicht angemeldet.");show("loginHelp");return;}
+  await checkAdmin(session.user);
+  db.auth.onAuthStateChange((_event,nextSession)=>{
+    if(!nextSession){hide("dashboard");hide("logoutBtn");show("loginHelp");message("status","Du bist abgemeldet.");}
+  });
+}
+async function checkAdmin(user){
+  const {data, error}=await db.from("profiles").select("id,role,display_name").eq("id",user.id).maybeSingle();
+  if(error){message("status","Profil konnte nicht geprüft werden: "+error.message,true);return;}
+  if(!data || data.id!==ADMIN_ID || data.role!=="admin"){
+    message("status","Angemeldet, aber keine ADMIN-Berechtigung.",true);show("denied");show("logoutBtn");return;
+  }
+  message("status","Zugriff bestätigt. Willkommen im NOX7 Command Center.");
+  show("dashboard");show("logoutBtn");
+  await loadMembers();
+}
+async function loadMembers(){
+  const {data,error}=await db.from("profiles").select("display_name,game_rank,power").order("display_name",{ascending:true}).limit(200);
+  const body=el("memberRows");body.replaceChildren();
+  if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Mitglieder konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);return;}
+  if(!data || data.length===0){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Noch keine Profile vorhanden.";tr.append(td);body.append(tr);return;}
+  data.forEach(p=>{const tr=document.createElement("tr");[p.display_name||"NOX7-Mitglied",p.game_rank||"Mitglied",p.power==null?"—":Number(p.power).toLocaleString("de-AT")].forEach(value=>{const td=document.createElement("td");td.textContent=String(value);tr.append(td);});body.append(tr);});
+  el("memberStatus").textContent=data.length+" Profile angezeigt.";
+}
+el("newsForm").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const title=el("newsTitle").value.trim(),body=el("newsBody").value.trim(),kind=el("newsType").value;
+  if(!title||!body)return;
+  const button=event.submitter; if(button)button.disabled=true;
+  const {error}=await db.from("posts").insert({title,body,kind});
+  if(button)button.disabled=false;
+  if(error){message("newsStatus","Veröffentlichung fehlgeschlagen: "+error.message,true);return;}
+  event.target.reset();message("newsStatus","Beitrag wurde veröffentlicht.");
+});
+el("logoutBtn").addEventListener("click",async()=>{if(db)await db.auth.signOut();window.location.href="index.html#account";});
+start();
+</script>
+</body>
+</html>
