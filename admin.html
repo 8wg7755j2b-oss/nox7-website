@@ -236,6 +236,33 @@ async function loadMembers(preserveStatus=false){
       rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";
       if(!currentAccessIsAdmin && p.id===currentAccessUserId){rank.disabled=true;rank.title="Der eigene Allianzrang kann hier nicht geändert werden.";}
       rankCell.append(rank);
+      if(!rank.disabled){
+        const saveRank=document.createElement("button");
+        saveRank.type="button";
+        saveRank.className="btn secondary";
+        saveRank.textContent="Rang speichern";
+        saveRank.style.marginTop="6px";
+        saveRank.addEventListener("click",async()=>{
+          const selectedRank=rank.value;
+          const permitted=currentAccessIsAdmin?rankCodes:(currentAccessRole==="R5"?["R1","R2","R3","R4"]:["R1","R2","R3"]);
+          if(!permitted.includes(selectedRank)){message("memberStatus","Dein Rang darf diese Rangstufe nicht vergeben.",true);return;}
+          if(selectedRank===p.game_rank){message("memberStatus","Der Rang ist bereits "+selectedRank+".");return;}
+          if(!confirm("Rang von "+(p.display_name||"Mitglied")+" auf "+selectedRank+" ändern?"))return;
+          saveRank.disabled=true;
+          message("memberStatus","Ändere Allianzrang für "+(p.display_name||"Mitglied")+" …");
+          try{
+            const {error}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:selectedRank});
+            if(error){message("memberStatus","Rangänderung fehlgeschlagen: "+error.message,true);return;}
+            const {data:check,error:checkError}=await db.from("profiles").select("game_rank").eq("id",p.id).maybeSingle();
+            if(checkError){message("memberStatus","Rang gespeichert, Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
+            if(!check||check.game_rank!==selectedRank){message("memberStatus","Rang wurde nicht wie gewünscht gespeichert. Datenbankwert: "+(check?.game_rank||"unbekannt"),true);return;}
+            message("memberStatus","ERFOLG: "+(p.display_name||"Mitglied")+" ist jetzt "+selectedRank+".");
+            await loadMembers(true);
+          }catch(err){message("memberStatus","Rangänderung fehlgeschlagen: "+(err.message||String(err)),true);}
+          finally{saveRank.disabled=false;}
+        });
+        rankCell.append(saveRank);
+      }
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");
