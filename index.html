@@ -89,7 +89,7 @@ async function loadMyDailyStats(userId){
 }
 async function loadPendingDailyStats(){
   const body=document.getElementById('pendingDailyStatsRows');if(!body)return;body.replaceChildren();
-  const {data,error}=await supabaseClient.from('nox7_daily_stats').select('id,user_id,report_date,vs_points,donation_points,note,status').in('status',['pending','approved']).order('submitted_at',{ascending:false}).limit(200);
+  const {data,error}=await supabaseClient.from('nox7_daily_stats').select('id,user_id,report_date,vs_points,donation_points,note,status').in('status',['pending','approved','rejected']).order('submitted_at',{ascending:false}).limit(200);
   if(error){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Meldungen konnten nicht geladen werden: '+error.message;tr.append(td);body.append(tr);return}
   if(!data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Noch keine offenen oder freigegebenen Meldungen.';tr.append(td);body.append(tr);return}
   const ids=[...new Set(data.map(r=>r.user_id))];const {data:profiles}=await supabaseClient.from('profiles').select('id,display_name').in('id',ids);const names=new Map((profiles||[]).map(p=>[p.id,p.display_name||'NOX7-Mitglied']));
@@ -100,7 +100,7 @@ async function loadPendingDailyStats(){
     const vs=document.createElement('input');vs.type='number';vs.min='0';vs.step='1';vs.value=String(r.vs_points);vs.setAttribute('aria-label','VS-Punkte bearbeiten');vsCell.append(vs);
     const don=document.createElement('input');don.type='number';don.min='0';don.step='1';don.value=String(r.donation_points);don.setAttribute('aria-label','Tech-Spendenpunkte bearbeiten');donCell.append(don);
     const note=document.createElement('input');note.maxLength=250;note.value=r.note||'';note.placeholder='Notiz';note.setAttribute('aria-label','Notiz bearbeiten');noteCell.append(note);
-    statusCell.textContent=r.status==='approved'?'Genehmigt':'Offen';
+    statusCell.textContent=r.status==='approved'?'Genehmigt':r.status==='rejected'?'Abgelehnt':'Offen';
     const save=document.createElement('button');save.type='button';save.className='btn secondary';save.textContent='Werte speichern';save.style.margin='2px';
     save.addEventListener('click',async()=>{
       const v=Number(vs.value),d=Number(don.value);
