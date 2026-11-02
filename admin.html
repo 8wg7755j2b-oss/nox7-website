@@ -299,7 +299,6 @@ async function loadMembers(preserveStatus=false){
         }catch(err){message("memberStatus","Unerwarteter Speicherfehler: "+(err.message||String(err)),true);}
         finally{edit.disabled=false;}
       });
-      actions.append(edit);
       const canArchive=(currentAccessIsAdmin || ["R4","R5"].includes(currentAccessRole)) && p.id!==currentAccessUserId && p.id!==ADMIN_ID && p.game_rank!=="R5" && (currentAccessIsAdmin || currentAccessRole==="R5" || ["R1","R2","R3"].includes(p.game_rank||"R1"));
       let archiveCheckbox=null,archiveReasonSelect=null;
       if(canArchive){
@@ -310,8 +309,15 @@ async function loadMembers(preserveStatus=false){
         archiveReasonSelect=document.createElement("select");archiveReasonSelect.setAttribute("aria-label","Archivierungsgrund");archiveReasonSelect.style.minWidth="130px";archiveReasonSelect.disabled=true;
         [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;archiveReasonSelect.append(o);});
         archiveCheckbox.addEventListener("change",()=>{archiveReasonSelect.disabled=!archiveCheckbox.checked;});
+        actions.style.display="grid";
+        actions.style.gridTemplateColumns="auto minmax(120px,1fr)";
+        actions.style.alignItems="center";
+        actions.style.gap="8px";
         actions.append(archiveWrap,archiveReasonSelect);
       }
+      edit.style.gridColumn="1 / -1";
+      edit.style.width="100%";
+      actions.append(edit);
     }else if((p.status||"active")!=="active" && currentAccessIsAdmin){
       const restore=document.createElement("button");restore.type="button";restore.className="btn secondary";restore.textContent="Reaktivieren";
       restore.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" wieder aktivieren?"))return;restore.disabled=true;const {error}=await db.rpc("reactivate_nox7_member",{p_user_id:p.id});restore.disabled=false;if(error){message("memberStatus","Reaktivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde reaktiviert.");await loadMembers();});
