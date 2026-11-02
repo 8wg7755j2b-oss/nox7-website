@@ -108,6 +108,7 @@ const el = id => document.getElementById(id);
 function message(id, text, error=false){const node=el(id);node.textContent=text;node.className=error?"notice error":"notice";}
 function show(id){el(id).classList.remove("hidden");}
 function hide(id){el(id).classList.add("hidden");}
+function profileSaveError(error){const msg=String(error?.message||"");if(error?.code==="23505"||msg.includes("profiles_display_name_unique")||msg.toLowerCase().includes("duplicate key"))return "Dieser Spielername ist bereits vergeben. Bitte wähle einen anderen Namen.";return msg||"Unbekannter Fehler";}
 async function start(){
   if(!window.NOX7_CONFIG || !window.NOX7_CONFIG.url || !window.NOX7_CONFIG.anonKey || !window.supabase){
     message("status","Supabase-Konfiguration fehlt. Bitte config.js prüfen.",true);return;
@@ -178,7 +179,7 @@ el("saveOwnAdminProfile").addEventListener("click",async()=>{
     const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:ADMIN_ID,p_game_rank:newRank});
     if(rankError){message("ownAdminStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message+". Name und Spielstärke wurden noch nicht geändert.",true);return;}
     const {error:profileError}=await db.from("profiles").update({display_name:newName,power:newPower}).eq("id",ADMIN_ID);
-    if(profileError){message("ownAdminStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileError.message,true);return;}
+    if(profileError){message("ownAdminStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileSaveError(profileError),true);return;}
     const {data:check,error:checkError}=await db.from("profiles").select("display_name,power,game_rank,role").eq("id",ADMIN_ID).maybeSingle();
     if(checkError){message("ownAdminStatus","Gespeichert, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
     if(!check||check.display_name!==newName||Number(check.power)!==newPower||check.game_rank!==newRank||check.role!=="admin"){
@@ -304,7 +305,7 @@ async function loadMembers(preserveStatus=false){
             if(rankError){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message,true);return;}
           }
           const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
-          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+error.message,true);return;}
+          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileSaveError(error),true);return;}
           message("memberStatus","Änderungen bestätigt. Prüfe alle drei Werte …");
           const {data:check,error:checkError}=await db.from("profiles").select("display_name,power,game_rank").eq("id",p.id).maybeSingle();
           if(checkError){message("memberStatus","Gespeichert, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
