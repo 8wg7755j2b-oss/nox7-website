@@ -114,9 +114,9 @@ async function loadMyDailyStats(userId){
 }
 async function loadPendingDailyStats(){
   const body=document.getElementById('pendingDailyStatsRows');if(!body)return;body.replaceChildren();
-  const {data,error}=await supabaseClient.from('nox7_daily_stats').select('id,user_id,report_date,vs_points,donation_points,note,status').in('status',['pending','approved','rejected']).order('submitted_at',{ascending:false}).limit(200);
+  const {data,error}=await supabaseClient.from('nox7_daily_stats').select('id,user_id,report_date,vs_points,donation_points,note,status').eq('status','pending').order('submitted_at',{ascending:false}).limit(200);
   if(error){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Meldungen konnten nicht geladen werden: '+error.message;tr.append(td);body.append(tr);return}
-  if(!data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Noch keine offenen oder freigegebenen Meldungen.';tr.append(td);body.append(tr);return}
+  if(!data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Keine offenen Anfragen vorhanden.';tr.append(td);body.append(tr);return}
   const ids=[...new Set(data.map(r=>r.user_id))];const {data:profiles}=await supabaseClient.from('profiles').select('id,display_name').in('id',ids);const names=new Map((profiles||[]).map(p=>[p.id,p.display_name||'NOX7-Mitglied']));
   data.forEach(r=>{
     const tr=document.createElement('tr');
