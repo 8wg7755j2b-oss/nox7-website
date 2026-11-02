@@ -84,7 +84,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <div class="eyebrow">PERSONNEL</div><h2>Mitgliederverwaltung</h2>
 <div class="card hidden" id="r5TransferPanel" style="margin:16px 0">
 <div class="eyebrow">LEADERSHIP TRANSFER</div><h3>R5 übergeben</h3>
-<p class="muted">Wähle ein aktives Mitglied. Nach der Übergabe erhält dieses Mitglied R5 und dein eigener Rang wird auf R1 gesetzt.</p>
+<p class="muted">Wähle ein aktives Mitglied oder dich selbst. Deine ADMIN-Berechtigung bleibt auch nach der Übergabe erhalten.</p>
 <div class="actions"><select id="r5TransferTarget" aria-label="Neuen R5 auswählen"><option value="">Mitglied auswählen …</option></select><button class="btn" id="r5TransferButton" type="button">R5 übertragen</button></div>
 <div id="r5TransferStatus" class="notice" role="status" aria-live="polite"></div>
 </div>
@@ -195,13 +195,13 @@ el("r5TransferButton").addEventListener("click",async()=>{
   const targetId=el("r5TransferTarget").value;
   if(!targetId){message("r5TransferStatus","Bitte zuerst ein aktives Mitglied auswählen.",true);return;}
   const targetName=el("r5TransferTarget").selectedOptions[0]?.textContent||"ausgewähltes Mitglied";
-  if(!confirm("R5 wirklich an "+targetName+" übertragen? Dein eigener Rang wird danach auf R1 gesetzt."))return;
+  if(!confirm("R5 wirklich an "+targetName+" übertragen? Deine ADMIN-Berechtigung bleibt erhalten."))return;
   const button=el("r5TransferButton");button.disabled=true;message("r5TransferStatus","R5 wird übertragen …");
   try{
     const {error}=await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:targetId});
     if(error){message("r5TransferStatus","Übergabe fehlgeschlagen: "+error.message,true);return;}
-    message("r5TransferStatus","R5 erfolgreich übertragen. Du wirst zur Hauptseite weitergeleitet.");
-    setTimeout(()=>{window.location.href="index.html";},1200);
+    message("r5TransferStatus","R5 erfolgreich übertragen. Deine ADMIN-Berechtigung bleibt erhalten.");
+    await loadMembers();
   }catch(err){message("r5TransferStatus","Übergabe fehlgeschlagen: "+(err.message||String(err)),true);}
   finally{button.disabled=false;}
 });
@@ -219,8 +219,8 @@ async function loadMembers(preserveStatus=false){
     const selected=target.value;
     target.replaceChildren();
     const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Mitglied auswählen …";target.append(placeholder);
-    active.filter(p=>p.id!==currentAccessUserId).forEach(p=>{const option=document.createElement("option");option.value=p.id;option.textContent=(p.display_name||"NOX7-Mitglied")+" ("+(p.game_rank||"R1")+")";target.append(option);});
-    if(active.some(p=>p.id===selected && p.id!==currentAccessUserId))target.value=selected;
+    active.forEach(p=>{const option=document.createElement("option");option.value=p.id;option.textContent=(p.display_name||"NOX7-Mitglied")+" ("+(p.game_rank||"R1")+")"+(p.id===currentAccessUserId?" – DU":"");target.append(option);});
+    if(active.some(p=>p.id===selected))target.value=selected;
   }else hide("r5TransferPanel");
   const activeCount=active.length;
   const r4Count=active.filter(p=>p.game_rank==="R4").length;
