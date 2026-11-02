@@ -88,6 +88,20 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <div class="actions"><select id="r5TransferTarget" aria-label="Neuen R5 auswählen"><option value="">Mitglied auswählen …</option></select><button class="btn" id="r5TransferButton" type="button">R5 übertragen</button></div>
 <div id="r5TransferStatus" class="notice" role="status" aria-live="polite"></div>
 </div>
+<div class="card hidden" id="manualStatsPanel" style="margin:16px 0">
+<div class="eyebrow">LEADERSHIP · MANUELLE PUNKTEERFASSUNG</div>
+<h3>VS-Punkte und Tech-Spenden eintragen</h3>
+<p class="muted">Einträge durch ADMIN, R5 oder R4 werden direkt genehmigt. Ein vorhandener Eintrag desselben Mitglieds am selben Datum wird ersetzt.</p>
+<form id="manualStatsForm" class="grid">
+<div><label for="manualStatsMember">Mitglied</label><select id="manualStatsMember" required><option value="">Mitglied auswählen …</option></select></div>
+<div><label for="manualStatsDate">Datum</label><input id="manualStatsDate" type="date" required></div>
+<div><label for="manualVsPoints">VS-Punkte</label><input id="manualVsPoints" type="number" min="0" step="1" value="0" required></div>
+<div><label for="manualDonationPoints">Tech-Spendenpunkte</label><input id="manualDonationPoints" type="number" min="0" step="1" value="0" required></div>
+<div style="grid-column:1/-1"><label for="manualStatsNote">Notiz (optional)</label><input id="manualStatsNote" maxlength="250" placeholder="z. B. Punkte nachgetragen durch Führung"></div>
+<div style="grid-column:1/-1"><button class="btn" type="submit">Punkte eintragen und genehmigen</button></div>
+</form>
+<div id="manualStatsStatus" class="notice" role="status" aria-live="polite"></div>
+</div>
 <p class="muted">Allianzrang verwalten, Mitglieder archivieren und frühere Mitglieder reaktivieren. Systemrollen (ADMIN/R4/R5) werden hier nicht verändert.</p>
 <div class="member-tabs" id="memberTabs" role="tablist" aria-label="Mitglieder nach Allianzrang"><button class="member-tab" data-view="R5" type="button" role="tab">R5</button><button class="member-tab" data-view="R4" type="button" role="tab">R4</button><button class="member-tab" data-view="R3" type="button" role="tab">R3</button><button class="member-tab" data-view="R2" type="button" role="tab">R2</button><button class="member-tab" data-view="R1" type="button" role="tab">R1</button><button class="member-tab" data-view="archived" type="button" role="tab">Archiv</button></div>
 <div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Status</th><th>Allianzrang</th><th>Spielstärke</th><th>Aktionen</th></tr></thead><tbody id="memberRows"><tr><td colspan="5">Wird geladen …</td></tr></tbody></table></div>
@@ -145,6 +159,7 @@ async function checkAdmin(user){
   }
   if(isAdmin) await loadRankLabels();
   await loadMembers();
+  if(isAdmin || isLeadership){show("manualStatsPanel");await loadManualStatsMembers();}
 }
 async function loadRankLabels(){
   const {data,error}=await db.from("nox7_rank_labels").select("rank_code,label");
@@ -203,6 +218,33 @@ el("r5TransferButton").addEventListener("click",async()=>{
     message("r5TransferStatus","R5 erfolgreich übertragen. Deine ADMIN-Berechtigung bleibt erhalten.");
     await loadMembers();
   }catch(err){message("r5TransferStatus","Übergabe fehlgeschlagen: "+(err.message||String(err)),true);}
+  finally{button.disabled=false;}
+});
+async function loadManualStatsMembers(){
+  const select=el("manualStatsMember");
+  const {data,error}=await db.from("profiles").select("id,display_name,game_rank").eq("status","active").order("display_name",{ascending:true}).limit(500);
+  if(error){message("manualStatsStatus","Mitglieder konnten nicht geladen werden: "+error.message,true);return;}
+  select.replaceChildren();
+  const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Mitglied auswählen …";select.append(placeholder);
+  (data||[]).forEach(p=>{const option=document.createElement("option");option.value=p.id;option.textContent=(p.display_name||"NOX7-Mitglied")+" ("+(p.game_rank||"R1")+")";select.append(option);});
+  const today=new Date();el("manualStatsDate").value=[today.getFullYear(),String(today.getMonth()+1).padStart(2,"0"),String(today.getDate()).padStart(2,"0")].join("-");
+}
+el("manualStatsForm").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const button=event.submitter;
+  const userId=el("manualStatsMember").value,date=el("manualStatsDate").value;
+  const vsRaw=el("manualVsPoints").value,donRaw=el("manualDonationPoints").value;
+  const vs=Number(vsRaw),don=Number(donRaw),note=el("manualStatsNote").value.trim();
+  if(!userId||!date||vsRaw===""||donRaw===""||!Number.isSafeInteger(vs)||vs<0||!Number.isSafeInteger(don)||don<0){message("manualStatsStatus","Bitte Mitglied, Datum und gültige Punktwerte ab 0 angeben.",true);return;}
+  const selected=el("manualStatsMember").selectedOptions[0]?.textContent||"Mitglied";
+  if(!confirm("VS- und Tech-Spendenpunkte für "+selected+" am "+date+" eintragen und direkt genehmigen? Ein vorhandener Eintrag für diesen Tag wird ersetzt."))return;
+  button.disabled=true;message("manualStatsStatus","Punkte werden eingetragen …");
+  try{
+    const {error}=await db.rpc("record_nox7_daily_stats_for_member",{p_user_id:userId,p_report_date:date,p_vs_points:vs,p_donation_points:don,p_note:note||null});
+    if(error)throw error;
+    message("manualStatsStatus","VS- und Tech-Spendenpunkte wurden eingetragen und genehmigt.");
+    el("manualStatsNote").value="";
+  }catch(err){message("manualStatsStatus","Eintragen fehlgeschlagen: "+(err.message||String(err)),true);}
   finally{button.disabled=false;}
 });
 let memberView="R5";
