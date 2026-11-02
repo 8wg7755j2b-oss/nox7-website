@@ -46,7 +46,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <div class="card stat"><div class="eyebrow">ZUGRIFFSSTUFE</div><strong id="dashboardAccessTitle">ADMIN</strong><span class="muted" id="dashboardAccessDesc">Systemadministrator</span></div>
 <div class="card stat"><div class="eyebrow">ALLIANZ</div><strong>NOX7</strong><span class="muted">Server 1653</span></div>
 </div>
-<section class="card">
+<section class="card hidden" id="adminOnlyNews">
 <div class="eyebrow">TRANSMISSION</div><h2>News & Events veröffentlichen</h2>
 <form id="newsForm">
 <label for="newsTitle">Überschrift</label><input id="newsTitle" maxlength="120" required placeholder="Titel der Meldung">
@@ -55,14 +55,14 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <button class="btn" type="submit">Veröffentlichen</button>
 </form><div id="newsStatus" aria-live="polite"></div>
 </section>
-<section class="card">
+<section class="card hidden" id="adminOnlyRankLabels">
 <div class="eyebrow">RANK CONFIGURATION</div><h2>Rangbezeichnungen</h2>
 <p class="muted">ADMIN kann alle fünf Bezeichnungen ändern.</p>
 <div class="grid" id="rankLabelFields"></div>
 <button class="btn" id="saveRankLabels" type="button">Rangbezeichnungen speichern</button>
 <div id="rankLabelStatus" aria-live="polite"></div>
 </section>
-<section class="card">
+<section class="card hidden" id="adminOnlyProfile">
 <div class="eyebrow">ADMIN PROFILE</div><h2>Eigenes ADMIN-Profil</h2>
 <p class="muted">Hier kannst du deinen eigenen Spielernamen, deine Spielstärke und deinen Allianzrang ändern. Deine Systemrolle ADMIN bleibt geschützt.</p>
 <div class="grid">
@@ -75,6 +75,12 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 </section>
 <section class="card">
 <div class="eyebrow">PERSONNEL</div><h2>Mitgliederverwaltung</h2>
+<div class="card hidden" id="r5TransferPanel" style="margin:16px 0">
+<div class="eyebrow">LEADERSHIP TRANSFER</div><h3>R5 übergeben</h3>
+<p class="muted">Wähle ein aktives Mitglied. Nach der Übergabe erhält dieses Mitglied R5 und dein eigener Rang wird auf R1 gesetzt.</p>
+<div class="actions"><select id="r5TransferTarget" aria-label="Neuen R5 auswählen"><option value="">Mitglied auswählen …</option></select><button class="btn" id="r5TransferButton" type="button">R5 übertragen</button></div>
+<div id="r5TransferStatus" class="notice" role="status" aria-live="polite"></div>
+</div>
 <p class="muted">Allianzrang verwalten, Mitglieder archivieren und frühere Mitglieder reaktivieren. Systemrollen (ADMIN/R4/R5) werden hier nicht verändert.</p>
 <div class="actions"><button class="btn secondary" id="showActive" type="button">Aktive Mitglieder</button><button class="btn secondary" id="showArchived" type="button">Archiv</button></div>
 <div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Status</th><th>Allianzrang</th><th>Spielstärke</th><th>Aktionen</th></tr></thead><tbody id="memberRows"><tr><td colspan="5">Wird geladen …</td></tr></tbody></table></div>
@@ -129,7 +135,7 @@ async function checkAdmin(user){
     el("adminOwnPower").value=data.power==null?"":String(data.power);
     el("adminOwnRank").value=rankCodes.includes(data.game_rank)?data.game_rank:"R5";
   }
-  await loadRankLabels();
+  if(isAdmin) await loadRankLabels();
   await loadMembers();
 }
 async function loadRankLabels(){
@@ -176,6 +182,21 @@ el("saveOwnAdminProfile").addEventListener("click",async()=>{
   }catch(err){message("ownAdminStatus","Speicherfehler: "+(err.message||String(err)),true);}
   finally{button.disabled=false;}
 });
+el("r5TransferButton").addEventListener("click",async()=>{
+  if(currentAccessRole!=="R5" || currentAccessIsAdmin){message("r5TransferStatus","Nur der aktuelle R5 kann die Übergabe ausführen.",true);return;}
+  const targetId=el("r5TransferTarget").value;
+  if(!targetId){message("r5TransferStatus","Bitte zuerst ein aktives Mitglied auswählen.",true);return;}
+  const targetName=el("r5TransferTarget").selectedOptions[0]?.textContent||"ausgewähltes Mitglied";
+  if(!confirm("R5 wirklich an "+targetName+" übertragen? Dein eigener Rang wird danach auf R1 gesetzt."))return;
+  const button=el("r5TransferButton");button.disabled=true;message("r5TransferStatus","R5 wird übertragen …");
+  try{
+    const {error}=await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:targetId});
+    if(error){message("r5TransferStatus","Übergabe fehlgeschlagen: "+error.message,true);return;}
+    message("r5TransferStatus","R5 erfolgreich übertragen. Du wirst zur Hauptseite weitergeleitet.");
+    setTimeout(()=>{window.location.href="index.html";},1200);
+  }catch(err){message("r5TransferStatus","Übergabe fehlgeschlagen: "+(err.message||String(err)),true);}
+  finally{button.disabled=false;}
+});
 let memberView="active";
 async function loadMembers(preserveStatus=false){
   const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
@@ -183,6 +204,16 @@ async function loadMembers(preserveStatus=false){
   if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Mitglieder konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);message("memberStatus","Mitglieder konnten nicht geladen werden: "+error.message,true);return;}
   const all=data||[];
   const active=all.filter(p=>(p.status||"active")==="active");
+  const transferPanel=el("r5TransferPanel");
+  if(currentAccessRole==="R5" && !currentAccessIsAdmin){
+    show("r5TransferPanel");
+    const target=el("r5TransferTarget");
+    const selected=target.value;
+    target.replaceChildren();
+    const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Mitglied auswählen …";target.append(placeholder);
+    active.filter(p=>p.id!==currentAccessUserId).forEach(p=>{const option=document.createElement("option");option.value=p.id;option.textContent=(p.display_name||"NOX7-Mitglied")+" ("+(p.game_rank||"R1")+")";target.append(option);});
+    if(active.some(p=>p.id===selected && p.id!==currentAccessUserId))target.value=selected;
+  }else hide("r5TransferPanel");
   el("countActive").textContent=active.length;
   el("countArchived").textContent=all.filter(p=>(p.status||"active")!=="active").length;
   rankCodes.forEach(code=>{el("count"+code).textContent=active.filter(p=>p.game_rank===code).length;});
@@ -245,28 +276,6 @@ async function loadMembers(preserveStatus=false){
         finally{edit.disabled=false;}
       });
       actions.append(edit);
-      if(currentAccessRole==="R5" && p.id!==currentAccessUserId){
-        const transfer=document.createElement("button");
-        transfer.type="button";
-        transfer.className="btn secondary";
-        transfer.textContent="R5 übertragen";
-        transfer.addEventListener("click",async()=>{
-          const targetName=p.display_name||"NOX7-Mitglied";
-          if(!confirm("R5 wirklich an "+targetName+" übertragen?\\n\\nDer ausgewählte Spieler wird R5 und dein eigener Rang wird auf R1 gesetzt. Du verlierst danach den Zugriff auf den Admin-Bereich."))return;
-          transfer.disabled=true;
-          message("memberStatus","Übertrage R5 an "+targetName+" …");
-          try{
-            const {error}=await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:p.id});
-            if(error){message("memberStatus","R5-Übergabe fehlgeschlagen: "+error.message,true);transfer.disabled=false;return;}
-            message("memberStatus","R5 wurde erfolgreich an "+targetName+" übertragen. Du wirst zur Hauptseite weitergeleitet …");
-            setTimeout(()=>{window.location.href="index.html";},1200);
-          }catch(err){
-            message("memberStatus","R5-Übergabe fehlgeschlagen: "+(err.message||String(err)),true);
-            transfer.disabled=false;
-          }
-        });
-        actions.append(transfer);
-      }
       if(currentAccessIsAdmin){
       const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
       [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
