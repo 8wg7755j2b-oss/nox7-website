@@ -62,7 +62,7 @@ async function loadLeadershipMembers(currentProfile){
     const tr=document.createElement('tr'),nameCell=document.createElement('td'),rankCell=document.createElement('td'),powerCell=document.createElement('td'),actionCell=document.createElement('td');
     const name=document.createElement('input');name.value=p.display_name||'';name.maxLength=40;name.setAttribute('aria-label','Spielername');nameCell.append(name);
     const rank=document.createElement('select');['R1','R2','R3','R4','R5'].forEach(code=>{const option=document.createElement('option');option.value=code;option.textContent=code+' – '+(rankLabels[code]||code);rank.append(option);});rank.value=['R1','R2','R3','R4','R5'].includes(p.game_rank)?p.game_rank:'R1';
-    const isOwnR5=currentProfile&&p.id===currentProfile.id&&currentProfile.game_rank==='R5'&&currentProfile.role!=='admin';
+    const isOwnR5=currentProfile&&p.id===currentProfile.id&&currentProfile.game_rank==='R5';
     if(isOwnR5){rank.disabled=true;rank.title='Deinen eigenen R5-Rang kannst du nicht selbst ändern. Dafür ist eine ausdrückliche R5-Übergabe erforderlich.';}
     rankCell.append(rank);
     const power=document.createElement('input');power.type='number';power.min='0';power.step='1';power.value=p.power==null?'':String(p.power);power.setAttribute('aria-label','Spielstärke');powerCell.append(power);
@@ -88,7 +88,7 @@ async function loadLeadershipMembers(currentProfile){
       finally{save.disabled=false;}
     });
     actionCell.append(save);
-    if(currentProfile&&currentProfile.game_rank==='R5'&&currentProfile.role!=='admin'&&p.id!==currentProfile.id){
+    if(currentProfile&&currentProfile.game_rank==='R5'&&p.id!==currentProfile.id){
       const transfer=document.createElement('button');transfer.type='button';transfer.className='btn secondary';transfer.textContent='R5 übertragen';
       transfer.addEventListener('click',async()=>{
         if(!window.confirm('R5 wirklich an '+(p.display_name||'dieses Mitglied')+' übertragen? Danach wirst du selbst auf R1 gesetzt.'))return;
