@@ -236,7 +236,7 @@ async function loadMembers(preserveStatus=false){
       rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";
       if(!currentAccessIsAdmin && p.id===currentAccessUserId){rank.disabled=true;rank.title="Der eigene Allianzrang kann hier nicht geändert werden.";}
       rankCell.append(rank);
-      if(!rank.disabled){
+      if(!rank.disabled && p.id!==ADMIN_ID){
         const saveRank=document.createElement("button");
         saveRank.type="button";
         saveRank.className="btn secondary";
