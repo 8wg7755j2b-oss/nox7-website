@@ -163,7 +163,7 @@ async function loadApprovedDailyStats(){
   const weekDates=Array.from({length:6},(_,i)=>{const d=new Date(mondayUTC.getTime()+i*86400000);return d.toISOString().slice(0,10)});
   const weekdays=['Mo','Di','Mi','Do','Fr','Sa'];
   head.replaceChildren();
-  ['Mitglied',...weekdays,'VS Woche aktuell','Spenden Woche gesamt'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
+  ['Mitglied',...weekdays,'VS Woche aktuell','Spende Woche Aktuell'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
   const totals=new Map();
   (data||[]).forEach(r=>{
     const v=totals.get(r.user_id)||{weekVs:0,weekDon:0,days:{}};
