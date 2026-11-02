@@ -21,7 +21,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 .hidden{display:none!important}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:480px}td,th{text-align:left;padding:11px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase}
 .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.badge{display:inline-block;border:1px solid #3d7189;border-radius:30px;padding:3px 9px;font-size:11px;color:#a8efff}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.wrap{padding:18px 14px}}
-.admin-shortcuts{position:sticky;top:8px;z-index:20;display:flex;flex-wrap:wrap;gap:8px;padding:10px;margin:14px 0 20px;background:#0c1728ed;border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(10px)}.admin-shortcuts a{display:inline-block;padding:8px 13px;border:1px solid #3b5877;border-radius:8px;background:#14243a;color:var(--white);text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}.admin-shortcuts a:hover{border-color:var(--cyan);color:var(--cyan)}#memberOverview,#adminOnlyNews,#adminOnlyRankLabels,#adminOnlyProfile,#memberManagement,#manualStatsPanel{scroll-margin-top:90px}
+.admin-shortcuts{position:sticky;top:8px;z-index:20;display:flex;flex-wrap:wrap;gap:8px;padding:10px;margin:14px 0 20px;background:#0c1728ed;border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(10px)}.admin-shortcuts a{display:inline-block;padding:8px 13px;border:1px solid #3b5877;border-radius:8px;background:#14243a;color:var(--white);text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}.admin-shortcuts a:hover{border-color:var(--cyan);color:var(--cyan)}#memberOverview,#adminRanking,#adminOnlyNews,#adminOnlyRankLabels,#adminOnlyProfile,#memberManagement,#manualStatsPanel{scroll-margin-top:90px}
 .member-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.member-tab{background:#17263c;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:9px 18px;cursor:pointer;font-weight:650}.member-tab:hover{border-color:var(--cyan);color:var(--white)}.member-tab.active{background:#17394a;border-color:var(--cyan);color:var(--white);box-shadow:inset 0 -2px 0 var(--cyan)}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -51,6 +51,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <a href="#adminOnlyNews" id="shortcutNews" class="hidden">News & Events</a>
 <a href="#adminOnlyRankLabels" id="shortcutRanks" class="hidden">Rangbezeichnungen</a>
 <a href="#adminOnlyProfile" id="shortcutProfile" class="hidden">ADMIN-Profil</a>
+<a href="#adminRanking" id="shortcutRanking">Rangliste</a>
 <a href="#memberManagement">Mitglieder</a>
 <a href="#manualStatsPanel" id="shortcutStats">VS & Spenden</a>
 </nav>
@@ -61,6 +62,17 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <div class="card stat"><div class="eyebrow">R2</div><strong id="countR2">—</strong></div>
 <div class="card stat"><div class="eyebrow">R1</div><strong id="countR1">—</strong></div>
 <div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div>
+</section>
+<section class="card" id="adminRanking">
+<div class="eyebrow">LEADERBOARD</div>
+<h2>Rangliste & Wochenstatistik</h2>
+<p class="muted">Dieselbe Spielstärke-Rangliste wie auf der öffentlichen Website. Darunter die freigegebenen VS- und Tech-Spendenpunkte der aktuellen Serverwoche (Montag bis Samstag, UTC).</p>
+<div class="actions" style="margin:12px 0"><button class="btn secondary" id="refreshAdminRanking" type="button">Rangliste aktualisieren</button><span class="muted" id="adminRankingUpdated" aria-live="polite"></span></div>
+<h3>Spielstärke</h3>
+<div class="tablewrap"><table><thead><tr><th>Platz</th><th>Spieler</th><th>Allianzrang</th><th>Spielstärke</th></tr></thead><tbody id="adminPowerRankingRows"><tr><td colspan="4">Rangliste wird geladen …</td></tr></tbody></table></div>
+<h3 style="margin-top:24px">VS & Tech-Spenden · Diese Woche</h3>
+<div class="tablewrap"><table><thead><tr><th>Platz</th><th>Mitglied</th><th>VS-Punkte</th><th>Tech-Spendenpunkte</th></tr></thead><tbody id="adminWeeklyRankingRows"><tr><td colspan="4">Wochenwerte werden geladen …</td></tr></tbody></table></div>
+<div id="adminRankingStatus" class="muted" role="status" aria-live="polite"></div>
 </section>
 <section class="card hidden" id="adminOnlyNews">
 <div class="eyebrow">TRANSMISSION</div><h2>News & Events veröffentlichen</h2>
@@ -169,8 +181,83 @@ async function checkAdmin(user){
   }
   if(isAdmin) await loadRankLabels();
   await loadMembers();
+  await loadAdminRanking();
   if(isAdmin || isLeadership){show("manualStatsPanel");await loadManualStatsMembers();}
 }
+async function loadAdminRanking(){
+  const powerBody=el("adminPowerRankingRows"),weekBody=el("adminWeeklyRankingRows");
+  powerBody.replaceChildren();weekBody.replaceChildren();
+  el("adminRankingStatus").textContent="Rangliste wird aktualisiert …";
+  const {data:profiles,error:profileError}=await db.from("profiles")
+    .select("id,display_name,game_rank,power")
+    .eq("status","active")
+    .order("power",{ascending:false,nullsFirst:false})
+    .limit(200);
+  if(profileError){
+    const tr=document.createElement("tr"),td=document.createElement("td");
+    td.colSpan=4;td.textContent="Spielstärke-Rangliste konnte nicht geladen werden: "+profileError.message;
+    tr.append(td);powerBody.append(tr);
+  }else{
+    const unique=new Map();
+    (profiles||[]).forEach(p=>{
+      const key=String(p.display_name||"").trim().toLocaleLowerCase("de-AT");
+      if(key&&!unique.has(key))unique.set(key,p);
+    });
+    const rows=[...unique.values()].slice(0,30);
+    if(!rows.length){
+      const tr=document.createElement("tr"),td=document.createElement("td");
+      td.colSpan=4;td.textContent="Noch keine Ranglistendaten vorhanden.";tr.append(td);powerBody.append(tr);
+    }else rows.forEach((p,i)=>{
+      const tr=document.createElement("tr");
+      [String(i+1).padStart(2,"0"),p.display_name||"NOX7-Mitglied",rankLabels[p.game_rank]||p.game_rank||"Rekrut",p.power==null?"—":Number(p.power).toLocaleString("de-AT")]
+        .forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td);});
+      powerBody.append(tr);
+    });
+  }
+  const now=new Date(),today=now.toISOString().slice(0,10);
+  const monday=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-((now.getUTCDay()+6)%7)));
+  const weekStart=monday.toISOString().slice(0,10);
+  const {data:stats,error:statsError}=await db.from("nox7_daily_stats")
+    .select("user_id,vs_points,donation_points")
+    .eq("status","approved")
+    .gte("report_date",weekStart)
+    .lte("report_date",today)
+    .limit(5000);
+  if(statsError){
+    const tr=document.createElement("tr"),td=document.createElement("td");
+    td.colSpan=4;td.textContent="Wochenwerte konnten nicht geladen werden: "+statsError.message;
+    tr.append(td);weekBody.append(tr);
+    el("adminRankingStatus").textContent="Spielstärke-Rangliste geladen; Wochenstatistik ist nicht verfügbar.";
+  }else{
+    const totals=new Map();
+    (stats||[]).forEach(r=>{
+      const v=totals.get(r.user_id)||{vs:0,donation:0};
+      v.vs+=Number(r.vs_points)||0;v.donation+=Number(r.donation_points)||0;totals.set(r.user_id,v);
+    });
+    const ids=[...totals.keys()];
+    let names=new Map();
+    if(ids.length){
+      const {data:members,error:nameError}=await db.from("profiles").select("id,display_name").eq("status","active").in("id",ids);
+      if(nameError){
+        const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=4;
+        td.textContent="Mitgliedsnamen konnten nicht geladen werden: "+nameError.message;tr.append(td);weekBody.append(tr);
+      }else names=new Map((members||[]).map(p=>[p.id,p.display_name||"NOX7-Mitglied"]));
+    }
+    const ranked=[...totals.entries()].filter(([id])=>names.has(id)).sort((a,b)=>b[1].vs-a[1].vs||b[1].donation-a[1].donation).slice(0,30);
+    if(!ranked.length){
+      const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=4;
+      td.textContent="Noch keine freigegebenen Punkte in dieser Woche.";tr.append(td);weekBody.append(tr);
+    }else ranked.forEach(([id,v],i)=>{
+      const tr=document.createElement("tr");
+      [String(i+1),names.get(id),v.vs.toLocaleString("de-AT"),v.donation.toLocaleString("de-AT")]
+        .forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td);});
+      weekBody.append(tr);
+    });
+    el("adminRankingStatus").textContent="Wochenwerte: "+weekStart+" bis "+today+" (UTC).";
+  }
+  el("adminRankingUpdated").textContent="Stand: "+new Date().toLocaleString("de-AT");
+}
+el("refreshAdminRanking").addEventListener("click",loadAdminRanking);
 async function loadRankLabels(){
   const {data,error}=await db.from("nox7_rank_labels").select("rank_code,label");
   if(error){message("rankLabelStatus","Rangbezeichnungen konnten nicht geladen werden: "+error.message,true);return;}
@@ -254,6 +341,7 @@ el("manualStatsForm").addEventListener("submit",async event=>{
     if(error)throw error;
     message("manualStatsStatus","VS- und Tech-Spendenpunkte wurden eingetragen und genehmigt.");
     el("manualStatsNote").value="";
+    await loadAdminRanking();
   }catch(err){message("manualStatsStatus","Eintragen fehlgeschlagen: "+(err.message||String(err)),true);}
   finally{button.disabled=false;}
 });
