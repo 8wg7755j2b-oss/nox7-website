@@ -184,11 +184,11 @@ async function loadMembers(preserveStatus=false){
     tr.append(name);
     const statusCell=document.createElement("td");statusCell.textContent=(p.status||"active")==="active"?"Aktiv":p.status==="left"?"Ausgetreten":p.status==="kicked"?"Entfernt":"Gewechselt";tr.append(statusCell);
     const rankCell=document.createElement("td");
+    let rank=null;
     if((p.status||"active")==="active"){
-      const rank=document.createElement("select");rank.setAttribute("aria-label","Allianzrang für "+(p.display_name||"Mitglied"));
+      rank=document.createElement("select");rank.setAttribute("aria-label","Allianzrang für "+(p.display_name||"Mitglied"));
       rankCodes.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+" – "+(rankLabels[v]||v);rank.append(o);});
       rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";rankCell.append(rank);
-      rankCell.append(rank);
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");
