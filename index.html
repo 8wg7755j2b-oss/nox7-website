@@ -87,7 +87,23 @@ async function loadLeadershipMembers(currentProfile){
       }catch(err){status('leadershipMemberStatus','Speicherfehler: '+(err.message||String(err)),true);}
       finally{save.disabled=false;}
     });
-    actionCell.append(save);tr.append(nameCell,rankCell,powerCell,actionCell);body.append(tr);
+    actionCell.append(save);
+    if(currentProfile&&currentProfile.game_rank==='R5'&&currentProfile.role!=='admin'&&p.id!==currentProfile.id){
+      const transfer=document.createElement('button');transfer.type='button';transfer.className='btn secondary';transfer.textContent='R5 übertragen';
+      transfer.addEventListener('click',async()=>{
+        if(!window.confirm('R5 wirklich an '+(p.display_name||'dieses Mitglied')+' übertragen? Danach wirst du selbst auf R1 gesetzt.'))return;
+        transfer.disabled=true;status('leadershipMemberStatus','Übertrage R5 an '+(p.display_name||'Mitglied')+' …');
+        try{
+          const {error:transferError}=await supabaseClient.rpc('transfer_nox7_r5',{p_new_r5_user_id:p.id});
+          if(transferError){status('leadershipMemberStatus','R5-Übergabe fehlgeschlagen: '+transferError.message,true);return;}
+          status('leadershipMemberStatus','R5 erfolgreich übertragen. Du bist jetzt R1; '+(p.display_name||'das ausgewählte Mitglied')+' ist jetzt R5.');
+          await loadLeadershipMembers({...currentProfile,game_rank:'R1'});await loadMembers();await loadRanking();
+        }catch(err){status('leadershipMemberStatus','Übergabefehler: '+(err.message||String(err)),true);}
+        finally{transfer.disabled=false;}
+      });
+      actionCell.append(transfer);
+    }
+    tr.append(nameCell,rankCell,powerCell,actionCell);body.append(tr);
   });
   if(!(data||[]).length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Keine aktiven Mitglieder gefunden.';tr.append(td);body.append(tr);}
 }
