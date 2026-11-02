@@ -255,39 +255,34 @@ async function loadMembers(preserveStatus=false){
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");
-    if((p.status||"active")==="active" && true){
-      const powerInput=document.createElement("input");powerInput.type="number";powerInput.min="0";powerInput.step="1";powerInput.value=p.power==null?"":String(p.power);powerInput.placeholder="Spielstärke";powerInput.setAttribute("aria-label","Spielstärke bearbeiten");powerInput.style.minWidth="125px";power.append(powerInput);power._powerInput=powerInput;
-    }else power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");
+    power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");
     tr.append(power);
     const actions=document.createElement("td");
     if((p.status||"active")==="active"){
       const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Speichern";
       edit.addEventListener("click",async()=>{
         const newName=name._nameInput?.value.trim()||p.display_name||"Sturmklingen General";
-        const rawPower=power._powerInput?.value.trim()||"";
-        const newPower=Number(rawPower);
         const newRank=rank.value;
         if(newName.length<2||newName.length>40){message("memberStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
-        if(rawPower===""||!Number.isSafeInteger(newPower)||newPower<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
         if(!rankCodes.includes(newRank)){message("memberStatus","Bitte einen gültigen Allianzrang auswählen.",true);return;}
         const archiveRequested=!!archiveCheckbox?.checked;
         const archiveReason=archiveReasonSelect?.value||"left";
         if(archiveRequested && !confirm("Änderungen speichern und "+newName+" als „"+({left:"Ausgetreten",kicked:"Entfernt",transferred:"Gewechselt"}[archiveReason])+"“ archivieren? Das Mitglied bleibt mit allen Statistiken im Archiv erhalten."))return;
         edit.disabled=true;
-        message("memberStatus","Speichere Name, Spielstärke und Allianzrang für "+newName+" …");
+        message("memberStatus","Speichere Spielername und Allianzrang für "+newName+" …");
         try{
           if(newRank!==p.game_rank){
             if(!currentAccessIsAdmin && p.id===currentAccessUserId){message("memberStatus","Der eigene Allianzrang kann nicht geändert werden.",true);return;}
             const rankResult = newRank==="R5" ? await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:p.id}) : await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:newRank});
             if(rankResult.error){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankResult.error.message,true);return;}
           }
-          const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
-          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileSaveError(error),true);return;}
+          const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:p.power});
+          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Spielername nicht: "+profileSaveError(error),true);return;}
           message("memberStatus","Änderungen bestätigt. Prüfe alle drei Werte …");
-          const {data:check,error:checkError}=await db.from("profiles").select("display_name,power,game_rank").eq("id",p.id).maybeSingle();
+          const {data:check,error:checkError}=await db.from("profiles").select("display_name,game_rank").eq("id",p.id).maybeSingle();
           if(checkError){message("memberStatus","Gespeichert, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
-          if(!check || Number(check.power)!==newPower || check.display_name!==newName || check.game_rank!==newRank){
-            message("memberStatus","NICHT korrekt gespeichert. Datenbankwert: Name="+(check?.display_name||"unbekannt")+", Power="+(check?.power??"leer")+", Rang="+(check?.game_rank||"unbekannt")+".",true);return;
+          if(!check || check.display_name!==newName || check.game_rank!==newRank){
+            message("memberStatus","NICHT korrekt gespeichert. Datenbankwert: Name="+(check?.display_name||"unbekannt")+", Rang="+(check?.game_rank||"unbekannt")+".",true);return;
           }
           if(archiveRequested){
             const {error:archiveError}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:archiveReason});
