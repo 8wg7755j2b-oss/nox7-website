@@ -13,7 +13,7 @@
 </head>
 <body>
 <header><div class="wrap nav"><a class="logo" href="#home">NOX<span>7</span></a><nav><a href="#team">Mitglieder</a><a href="#news">News & Events</a><a href="#ranking">Rangliste</a><a href="#rules">Regeln</a><a href="#contact">Kontakt</a></nav><div id="headerAuthBox" class="header-auth"><button class="btn" onclick="openAuthModal('login')">Anmelden</button><button class="btn secondary header-extra" onclick="openAuthModal('signup')">Registrieren</button><button class="btn secondary header-extra" onclick="openAuthModal('reset')">Passwort vergessen</button><span id="authStatus" class="header-status" aria-live="polite"></span></div><div id="headerMemberBox" class="header-member hidden"><strong id="headerPlayerName"></strong><a id="headerAdminLink" class="btn secondary hidden" href="admin.html">Admin-Bereich</a><button class="btn secondary" onclick="signOut()">Abmelden</button></div></div></header>
-<div id="authModal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle" onclick="if(event.target===this)closeAuthModal()"><div class="auth-modal-card"><button class="auth-modal-close" type="button" aria-label="Schließen" onclick="closeAuthModal()">×</button><div class="eyebrow">NOX7 MEMBER ACCESS</div><h2 id="authModalTitle">Konto erstellen</h2><p id="authModalDescription" class="muted">Registriere dich für den NOX7-Mitgliederbereich.</p><form id="authModalForm" onsubmit="event.preventDefault();submitAuthModal()"><label for="modalEmail">E-Mail-Adresse</label><input id="modalEmail" type="email" required autocomplete="email" placeholder="name@beispiel.at"><div id="modalPasswordWrap"><label for="modalPassword">Passwort</label><input id="modalPassword" type="password" minlength="8" autocomplete="current-password" placeholder="Passwort"></div><div id="modalPasswordConfirmWrap" class="hidden"><label for="modalPasswordConfirm">Passwort wiederholen</label><input id="modalPasswordConfirm" type="password" minlength="8" autocomplete="new-password" placeholder="Passwort erneut eingeben"></div><div class="actions"><button id="authModalSubmit" class="btn" type="submit">Konto erstellen</button><button class="btn secondary" type="button" onclick="closeAuthModal()">Abbrechen</button></div></form><div id="authModalStatus" role="status" aria-live="polite"></div></div></div>
+<div id="authModal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle" onclick="if(event.target===this)closeAuthModal()"><div class="auth-modal-card"><button class="auth-modal-close" type="button" aria-label="Schließen" onclick="closeAuthModal()">×</button><div class="eyebrow">NOX7 MEMBER ACCESS</div><h2 id="authModalTitle">Konto erstellen</h2><p id="authModalDescription" class="muted">Registriere dich für den NOX7-Mitgliederbereich.</p><form id="authModalForm" onsubmit="event.preventDefault();submitAuthModal()"><div id="modalDisplayNameWrap" class="hidden"><label for="modalDisplayName">Spielername (öffentlich)</label><input id="modalDisplayName" type="text" maxlength="40" minlength="2" autocomplete="nickname" placeholder="Dein eindeutiger Spielername"></div><label id="modalIdentifierLabel" for="modalEmail">E-Mail-Adresse</label><input id="modalEmail" type="text" required autocomplete="username" placeholder="Spielername oder E-Mail-Adresse"><div id="modalPasswordWrap"><label for="modalPassword">Passwort</label><input id="modalPassword" type="password" minlength="8" autocomplete="current-password" placeholder="Passwort"></div><div id="modalPasswordConfirmWrap" class="hidden"><label for="modalPasswordConfirm">Passwort wiederholen</label><input id="modalPasswordConfirm" type="password" minlength="8" autocomplete="new-password" placeholder="Passwort erneut eingeben"></div><div class="actions"><button id="authModalSubmit" class="btn" type="submit">Konto erstellen</button><button class="btn secondary" type="button" onclick="closeAuthModal()">Abbrechen</button></div></form><div id="authModalStatus" role="status" aria-live="polite"></div></div></div>
 <main>
 <div class="wrap hero" id="home"><div><div class="eyebrow">LAST WAR · ALLIANCE 1653</div><h1>UNITED IN<br><em>THE SHADOWS.</em></h1><p class="lead">Wir sind NOX7. Mehr als eine Allianz – eine Familie. Zusammen kämpfen, gemeinsam wachsen und unseren Server prägen.</p><div class="actions"><a class="btn" href="#team">Allianz entdecken</a><a class="btn secondary" href="#contact">Mitglied werden</a></div></div><div class="crest"><div class="mark">N<span style="color:var(--cyan)">7</span><small>NOX · EST. 1653</small></div></div></div>
 <div class="wrap stats"><div class="stat"><strong>1653</strong><small>Server</small></div><div class="stat"><strong>NOX7</strong><small>Allianz</small></div><div class="stat"><strong>24/7</strong><small>Zusammenhalt</small></div><div class="stat"><strong>∞</strong><small>Teamgeist</small></div></div>
@@ -42,9 +42,83 @@ async function init(){await loadRankLabels();supabaseClient.auth.onAuthStateChan
 async function loadRankLabels(){const {data,error}=await supabaseClient.from('nox7_rank_labels').select('rank_code,label');if(error)return;(data||[]).forEach(r=>{rankLabels[r.rank_code]=r.label});}
 function requireConfig(){if(!ready()){status('authStatus','Bitte zuerst Supabase in config.js konfigurieren.',true);return false}return true}
 let authModalMode='signup';
-function openAuthModal(mode){authModalMode=mode;const modal=document.getElementById('authModal');document.getElementById('modalEmail').value='';document.getElementById('modalPassword').value='';document.getElementById('modalPasswordConfirm').value='';document.getElementById('authModalStatus').textContent='';const reset=mode==='reset',login=mode==='login',signup=mode==='signup';document.getElementById('authModalTitle').textContent=reset?'Passwort zurücksetzen':login?'Anmelden':'Konto erstellen';document.getElementById('authModalDescription').textContent=reset?'Wir senden dir einen Link zum Zurücksetzen deines Passworts.':login?'Melde dich mit deinen NOX7-Zugangsdaten an.':'Registriere dich für den NOX7-Mitgliederbereich.';document.getElementById('modalPasswordWrap').classList.toggle('hidden',reset);document.getElementById('modalPasswordConfirmWrap').classList.toggle('hidden',!signup);document.getElementById('modalPassword').required=!reset;document.getElementById('modalPasswordConfirm').required=signup;document.getElementById('modalPassword').autocomplete=signup?'new-password':'current-password';document.getElementById('modalPassword').minLength=signup?8:1;document.getElementById('modalPassword').placeholder=signup?'Mindestens 8 Zeichen':'Passwort';document.getElementById('authModalSubmit').textContent=reset?'Link anfordern':login?'Anmelden':'Konto erstellen';modal.classList.remove('hidden');document.getElementById('modalEmail').focus()}
+function openAuthModal(mode){
+  authModalMode=mode;
+  const modal=document.getElementById('authModal');
+  document.getElementById('modalEmail').value='';
+  document.getElementById('modalDisplayName').value='';
+  document.getElementById('modalPassword').value='';
+  document.getElementById('modalPasswordConfirm').value='';
+  document.getElementById('authModalStatus').textContent='';
+  const reset=mode==='reset',login=mode==='login',signup=mode==='signup';
+  document.getElementById('authModalTitle').textContent=reset?'Passwort zurücksetzen':login?'Anmelden':'Konto erstellen';
+  document.getElementById('authModalDescription').textContent=reset?'Wir senden dir einen Link zum Zurücksetzen deines Passworts.':login?'Melde dich mit Spielername oder E-Mail-Adresse an.':'Registriere dich mit deinem eindeutigen NOX7-Spielernamen.';
+  document.getElementById('modalDisplayNameWrap').classList.toggle('hidden',!signup);
+  document.getElementById('modalIdentifierLabel').textContent=login?'Spielername oder E-Mail-Adresse':'E-Mail-Adresse';
+  const identifier=document.getElementById('modalEmail');
+  identifier.type=reset?'email':'text';
+  identifier.autocomplete=reset?'email':login?'username':'email';
+  identifier.placeholder=login?'Spielername oder E-Mail-Adresse':'name@beispiel.at';
+  document.getElementById('modalPasswordWrap').classList.toggle('hidden',reset);
+  document.getElementById('modalPasswordConfirmWrap').classList.toggle('hidden',!signup);
+  document.getElementById('modalPassword').required=!reset;
+  document.getElementById('modalPasswordConfirm').required=signup;
+  document.getElementById('modalDisplayName').required=signup;
+  document.getElementById('modalPassword').autocomplete=signup?'new-password':'current-password';
+  document.getElementById('modalPassword').minLength=signup?8:1;
+  document.getElementById('modalPassword').placeholder=signup?'Mindestens 8 Zeichen':'Passwort';
+  document.getElementById('authModalSubmit').textContent=reset?'Link anfordern':login?'Anmelden':'Konto erstellen';
+  modal.classList.remove('hidden');
+  (signup?document.getElementById('modalDisplayName'):identifier).focus();
+}
 function closeAuthModal(){document.getElementById('authModal').classList.add('hidden')}
-async function submitAuthModal(){if(!requireConfig())return;const email=document.getElementById('modalEmail').value.trim(),password=document.getElementById('modalPassword').value,passwordConfirm=document.getElementById('modalPasswordConfirm').value,output=document.getElementById('authModalStatus'),button=document.getElementById('authModalSubmit');if(authModalMode==='signup'&&password!==passwordConfirm){output.textContent='Die beiden Passwörter stimmen nicht überein.';document.getElementById('modalPasswordConfirm').focus();return}button.disabled=true;output.textContent='Bitte warten …';let error=null,message='';if(authModalMode==='reset'){const result=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin});error=result.error;message='Falls ein Konto existiert, erhältst du eine E-Mail mit einem Link zum Zurücksetzen.'}else if(authModalMode==='login'){const result=await supabaseClient.auth.signInWithPassword({email,password});error=result.error;if(!error){closeAuthModal();button.disabled=false;return}}else if(password.length<8){error={message:'Bitte ein Passwort mit mindestens 8 Zeichen verwenden.'}}else{const result=await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:location.origin}});error=result.error;message='Registrierung gestartet. Bitte prüfe dein E-Mail-Postfach zur Bestätigung.'}button.disabled=false;output.textContent=error?error.message:message}
+async function submitAuthModal(){
+  if(!requireConfig())return;
+  const identifier=document.getElementById('modalEmail').value.trim();
+  const displayName=document.getElementById('modalDisplayName').value.trim();
+  const password=document.getElementById('modalPassword').value;
+  const passwordConfirm=document.getElementById('modalPasswordConfirm').value;
+  const output=document.getElementById('authModalStatus'),button=document.getElementById('authModalSubmit');
+  if(authModalMode==='signup'&&(displayName.length<2||displayName.length>40)){output.textContent='Der Spielername muss 2 bis 40 Zeichen haben.';document.getElementById('modalDisplayName').focus();return;}
+  if(authModalMode==='signup'&&password!==passwordConfirm){output.textContent='Die beiden Passwörter stimmen nicht überein.';document.getElementById('modalPasswordConfirm').focus();return;}
+  if(authModalMode==='reset'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)){output.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
+  if(authModalMode==='login'&&!identifier){output.textContent='Bitte Spielername oder E-Mail-Adresse eingeben.';return;}
+  button.disabled=true;output.textContent='Bitte warten …';
+  let error=null,message='';
+  try{
+    if(authModalMode==='reset'){
+      const result=await supabaseClient.auth.resetPasswordForEmail(identifier,{redirectTo:location.origin});
+      error=result.error;message='Falls ein Konto existiert, erhältst du eine E-Mail mit einem Link zum Zurücksetzen.';
+    }else if(authModalMode==='login'){
+      if(identifier.includes('@')){
+        const result=await supabaseClient.auth.signInWithPassword({email:identifier,password});
+        error=result.error;
+      }else{
+        const result=await supabaseClient.functions.invoke('login-with-username',{body:{username:identifier,password}});
+        error=result.error;
+        if(!error){
+          const session=result.data?.session;
+          if(!session?.access_token||!session?.refresh_token)error={message:'Anmeldung konnte nicht abgeschlossen werden.'};
+          else{
+            const setResult=await supabaseClient.auth.setSession({access_token:session.access_token,refresh_token:session.refresh_token});
+            error=setResult.error;
+          }
+        }
+      }
+      if(!error){closeAuthModal();button.disabled=false;return;}
+    }else if(password.length<8){
+      error={message:'Bitte ein Passwort mit mindestens 8 Zeichen verwenden.'};
+    }else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)){
+      error={message:'Bitte eine gültige E-Mail-Adresse eingeben.'};
+    }else{
+      const result=await supabaseClient.auth.signUp({email:identifier,password,options:{emailRedirectTo:location.origin,data:{display_name:displayName}}});
+      error=result.error;message='Registrierung gestartet. Bitte prüfe dein E-Mail-Postfach zur Bestätigung.';
+      if(!error&&result.data?.user&&!result.data?.session)message='Registrierung gestartet. Bitte bestätige deine E-Mail. Dein Spielername wurde vorgemerkt.';
+    }
+  }catch(err){error=err}
+  button.disabled=false;
+  output.textContent=error?(error.message||'Anmeldung fehlgeschlagen. Bitte Eingaben prüfen.') : message;
+}
 async function signUp(){openAuthModal('signup')}
 async function signIn(){openAuthModal('login')}
 async function resetPassword(){openAuthModal('reset')}
