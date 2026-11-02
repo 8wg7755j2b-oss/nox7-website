@@ -73,8 +73,10 @@ async function loadLeadershipMembers(currentProfile){
       if(rawPower===''||!Number.isSafeInteger(newPower)||newPower<0){status('leadershipMemberStatus','Bitte eine gültige Spielstärke ab 0 eingeben.',true);return;}
       save.disabled=true;status('leadershipMemberStatus','Speichere '+newName+' …');
       try{
-        const {error:rankError}=await supabaseClient.rpc('set_nox7_game_rank',{p_user_id:p.id,p_game_rank:newRank});
-        if(rankError){status('leadershipMemberStatus','Allianzrang konnte nicht gespeichert werden: '+rankError.message,true);return;}
+        if(newRank!==p.game_rank){
+          const {error:rankError}=await supabaseClient.rpc('set_nox7_game_rank',{p_user_id:p.id,p_game_rank:newRank});
+          if(rankError){status('leadershipMemberStatus','Allianzrang konnte nicht gespeichert werden: '+rankError.message,true);return;}
+        }
         const {error:detailsError}=await supabaseClient.rpc('update_nox7_member_details',{p_user_id:p.id,p_display_name:newName,p_power:newPower});
         if(detailsError){status('leadershipMemberStatus','Rang wurde gespeichert, aber Name/Spielstärke nicht: '+detailsError.message,true);return;}
         const {data:check,error:checkError}=await supabaseClient.from('profiles').select('display_name,power,game_rank').eq('id',p.id).maybeSingle();
