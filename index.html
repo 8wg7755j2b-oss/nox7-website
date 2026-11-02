@@ -101,10 +101,13 @@ function setupLeadershipMemberEditor(profile){
   panel.classList.remove('hidden');
   loadLeadershipMembers(profile);
 }
+let leadershipMembersLoadId=0;
 async function loadLeadershipMembers(currentProfile){
   const body=document.getElementById('leadershipMemberRows');
-  body.replaceChildren();
+  const loadId=++leadershipMembersLoadId;
   const {data,error}=await supabaseClient.from('profiles').select('id,display_name,game_rank,power,status').eq('status','active').order('display_name',{ascending:true}).limit(500);
+  if(loadId!==leadershipMembersLoadId)return;
+  body.replaceChildren();
   if(error){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Mitglieder konnten nicht geladen werden: '+error.message;tr.append(td);body.append(tr);status('leadershipMemberStatus','Laden fehlgeschlagen: '+error.message,true);return;}
   (data||[]).forEach(p=>{
     const tr=document.createElement('tr'),nameCell=document.createElement('td'),rankCell=document.createElement('td'),powerCell=document.createElement('td'),actionCell=document.createElement('td');
