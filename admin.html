@@ -137,7 +137,11 @@ async function loadMembers(){
   if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent=memberView==="active"?"Keine aktiven Mitglieder vorhanden.":"Das Archiv ist leer.";tr.append(td);body.append(tr);el("memberStatus").textContent="0 Profile.";return;}
   rows.forEach(p=>{
     const tr=document.createElement("tr");
-    const name=document.createElement("td");name.textContent=p.display_name||"NOX7-Mitglied";tr.append(name);
+    const name=document.createElement("td");
+    if((p.status||"active")==="active" && p.id!==ADMIN_ID){
+      const nameInput=document.createElement("input");nameInput.type="text";nameInput.maxLength=40;nameInput.value=p.display_name||"";nameInput.setAttribute("aria-label","Spielername bearbeiten");nameInput.style.minWidth="150px";name.append(nameInput);name.dataset.editName="1";name._nameInput=nameInput;
+    }else name.textContent=p.display_name||"NOX7-Mitglied";
+    tr.append(name);
     const statusCell=document.createElement("td");statusCell.textContent=(p.status||"active")==="active"?"Aktiv":p.status==="left"?"Ausgetreten":p.status==="kicked"?"Entfernt":"Gewechselt";tr.append(statusCell);
     const rankCell=document.createElement("td");
     if((p.status||"active")==="active"){
@@ -149,9 +153,28 @@ async function loadMembers(){
       rankCell.append(save);
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
-    const power=document.createElement("td");power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");tr.append(power);
+    const power=document.createElement("td");
+    if((p.status||"active")==="active" && p.id!==ADMIN_ID){
+      const powerInput=document.createElement("input");powerInput.type="number";powerInput.min="0";powerInput.step="1";powerInput.value=p.power==null?"":String(p.power);powerInput.placeholder="Spielstärke";powerInput.setAttribute("aria-label","Spielstärke bearbeiten");powerInput.style.minWidth="125px";power.append(powerInput);power._powerInput=powerInput;
+    }else power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");
+    tr.append(power);
     const actions=document.createElement("td");
     if((p.status||"active")==="active" && p.id!==ADMIN_ID){
+      const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Änderungen speichern";
+      edit.addEventListener("click",async()=>{
+        const newName=name._nameInput?.value.trim()||"";
+        const rawPower=power._powerInput?.value.trim()||"";
+        const newPower=Number(rawPower);
+        if(newName.length<2||newName.length>40){message("memberStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
+        if(rawPower===""||!Number.isSafeInteger(newPower)||newPower<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
+        edit.disabled=true;
+        const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
+        edit.disabled=false;
+        if(error){message("memberStatus","Mitgliedsdaten konnten nicht gespeichert werden: "+error.message,true);return;}
+        message("memberStatus","Name und Spielstärke von "+newName+" wurden gespeichert.");
+        await loadMembers();
+      });
+      actions.append(edit);
       const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
       [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
       const archive=document.createElement("button");archive.type="button";archive.className="btn secondary";archive.textContent="Archivieren";
