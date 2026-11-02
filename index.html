@@ -306,7 +306,7 @@ async function loadLeadershipMembers(currentProfile){
       finally{save.disabled=false;}
     });
     actionCell.append(save);
-    if(currentProfile&&currentProfile.game_rank==='R5'&&p.id!==currentProfile.id){
+    if(currentProfile&&(currentProfile.game_rank==='R5'||(currentProfile.id===ADMIN_ID&&currentProfile.role==='admin'))&&p.id!==currentProfile.id&&p.game_rank!=='R5'){
       const transfer=document.createElement('button');transfer.type='button';transfer.className='btn secondary';transfer.textContent='R5 übertragen';
       transfer.addEventListener('click',async()=>{
         if(!window.confirm('R5 wirklich an '+(p.display_name||'dieses Mitglied')+' übertragen? Danach wirst du selbst auf R1 gesetzt.'))return;
