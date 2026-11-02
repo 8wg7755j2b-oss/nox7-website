@@ -318,17 +318,35 @@ async function loadMembers(preserveStatus=false){
         finally{edit.disabled=false;}
       });
       actions.append(edit);
-      if(currentAccessIsAdmin){
-      const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
-      [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
-      const archive=document.createElement("button");archive.type="button";archive.className="btn secondary";archive.textContent="Archivieren";
-      archive.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" archivieren?"))return;archive.disabled=true;const {error}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:reason.value});archive.disabled=false;if(error){message("memberStatus","Archivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde archiviert.");await loadMembers();});
-      actions.append(reason,archive);
+      const canArchive=(currentAccessIsAdmin || ["R4","R5"].includes(currentAccessRole)) && p.id!==currentAccessUserId && p.id!==ADMIN_ID && p.game_rank!=="R5" && (currentAccessIsAdmin || currentAccessRole==="R5" || ["R1","R2","R3"].includes(p.game_rank||"R1"));
+      if(canArchive){
+        const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
+        [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
+        const archive=document.createElement("button");archive.type="button";archive.className="btn secondary";archive.textContent="Archivieren";
+        archive.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" archivieren? Es bleibt mit allen Statistiken im Archiv erhalten."))return;archive.disabled=true;const {error}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:reason.value});archive.disabled=false;if(error){message("memberStatus","Archivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde archiviert.");await loadMembers();});
+        actions.append(reason,archive);
       }
     }else if((p.status||"active")!=="active" && currentAccessIsAdmin){
       const restore=document.createElement("button");restore.type="button";restore.className="btn secondary";restore.textContent="Reaktivieren";
       restore.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" wieder aktivieren?"))return;restore.disabled=true;const {error}=await db.rpc("reactivate_nox7_member",{p_user_id:p.id});restore.disabled=false;if(error){message("memberStatus","Reaktivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde reaktiviert.");await loadMembers();});
+      const permanentDelete=document.createElement("button");permanentDelete.type="button";permanentDelete.className="btn secondary";permanentDelete.textContent="Endgültig löschen";permanentDelete.style.borderColor="#9b4052";permanentDelete.style.color="#ffc4cf";
+      permanentDelete.addEventListener("click",async()=>{
+        const memberName=p.display_name||"NOX7-Mitglied";
+        if(p.id===ADMIN_ID || p.id===currentAccessUserId || p.game_rank==="R5"){message("memberStatus","Dieses Konto ist geschützt und kann nicht endgültig gelöscht werden.",true);return;}
+        if(!confirm("ACHTUNG: "+memberName+" und das Konto endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden."))return;
+        if(prompt('Zur Bestätigung bitte ENDGÜLTIG LÖSCHEN eingeben:')!=="ENDGÜLTIG LÖSCHEN")return;
+        permanentDelete.disabled=true;message("memberStatus","Mitgliedskonto wird endgültig gelöscht …");
+        try{
+          const {data,error}=await db.functions.invoke("delete-nox7-member",{body:{user_id:p.id}});
+          if(error)throw error;
+          if(data?.error)throw new Error(data.error);
+          message("memberStatus","Konto von "+memberName+" wurde endgültig gelöscht.");
+          await loadMembers();
+        }catch(err){message("memberStatus","Endgültiges Löschen fehlgeschlagen: "+(err.message||String(err)),true);}
+        finally{permanentDelete.disabled=false;}
+      });
       actions.append(restore);
+      if(p.id!==ADMIN_ID && p.id!==currentAccessUserId && p.game_rank!=="R5")actions.append(permanentDelete);
     }else if((p.status||"active")!=="active" && !currentAccessIsAdmin) actions.textContent="Nur ADMIN";
     else actions.textContent="Geschützt";
     tr.append(actions);body.append(tr);
