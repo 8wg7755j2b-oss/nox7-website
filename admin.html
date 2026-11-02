@@ -41,7 +41,7 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <p>Dieses Konto besitzt keine ADMIN-Berechtigung. Der Zugang ist ausschließlich dem festgelegten NOX7-ADMIN vorbehalten.</p>
 </section>
 <div id="dashboard" class="hidden">
-<section class="grid" id="memberOverview" aria-label="Mitgliederübersicht"><div class="card stat"><div class="eyebrow">AKTIVE MITGLIEDER</div><strong id="countActive">—</strong></div><div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div><div class="card stat"><div class="eyebrow">R4</div><strong id="countR4">—</strong></div><div class="card stat"><div class="eyebrow">R5</div><strong id="countR5">—</strong></div><div class="card stat"><div class="eyebrow">MITGLIED</div><strong id="countMember">—</strong></div></section>
+<section class="grid" id="memberOverview" aria-label="Mitgliederübersicht"><div class="card stat"><div class="eyebrow">AKTIVE MITGLIEDER</div><strong id="countActive">—</strong></div><div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div><div class="card stat"><div class="eyebrow">R1</div><strong id="countR1">—</strong></div><div class="card stat"><div class="eyebrow">R2</div><strong id="countR2">—</strong></div><div class="card stat"><div class="eyebrow">R3</div><strong id="countR3">—</strong></div><div class="card stat"><div class="eyebrow">R4</div><strong id="countR4">—</strong></div><div class="card stat"><div class="eyebrow">R5</div><strong id="countR5">—</strong></div></section>
 <div class="grid">
 <div class="card stat"><div class="eyebrow">SYSTEMROLLE</div><strong>ADMIN</strong><span class="muted">Einziger Systemadministrator</span></div>
 <div class="card stat"><div class="eyebrow">ALLIANZ</div><strong>NOX7</strong><span class="muted">Server 1653</span></div>
@@ -56,6 +56,13 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 </form><div id="newsStatus" aria-live="polite"></div>
 </section>
 <section class="card">
+<div class="eyebrow">RANK CONFIGURATION</div><h2>Rangbezeichnungen</h2>
+<p class="muted">ADMIN kann alle fünf Bezeichnungen ändern.</p>
+<div class="grid" id="rankLabelFields"></div>
+<button class="btn" id="saveRankLabels" type="button">Rangbezeichnungen speichern</button>
+<div id="rankLabelStatus" aria-live="polite"></div>
+</section>
+<section class="card">
 <div class="eyebrow">PERSONNEL</div><h2>Mitgliederverwaltung</h2>
 <p class="muted">Allianzrang verwalten, Mitglieder archivieren und frühere Mitglieder reaktivieren. Systemrollen (ADMIN/R4/R5) werden hier nicht verändert.</p>
 <div class="actions"><button class="btn secondary" id="showActive" type="button">Aktive Mitglieder</button><button class="btn secondary" id="showArchived" type="button">Archiv</button></div>
@@ -68,6 +75,8 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 <script>
 const ADMIN_ID = "9cd89136-4682-4e6a-84ba-43c41327fa93";
 let db = null;
+const rankCodes=["R1","R2","R3","R4","R5"];
+let rankLabels={R1:"Rekrut",R2:"Kämpfer",R3:"Veteran",R4:"Offizier",R5:"Allianzführer"};
 const el = id => document.getElementById(id);
 function message(id, text, error=false){const node=el(id);node.textContent=text;node.className=error?"notice error":"notice";}
 function show(id){el(id).classList.remove("hidden");}
@@ -93,8 +102,27 @@ async function checkAdmin(user){
   }
   message("status","Zugriff bestätigt. Willkommen im NOX7 Command Center.");
   show("dashboard");show("logoutBtn");
+  await loadRankLabels();
   await loadMembers();
 }
+async function loadRankLabels(){
+  const {data,error}=await db.from("nox7_rank_labels").select("rank_code,label");
+  if(error){message("rankLabelStatus","Rangbezeichnungen konnten nicht geladen werden: "+error.message,true);return;}
+  (data||[]).forEach(r=>{if(rankCodes.includes(r.rank_code))rankLabels[r.rank_code]=r.label;});
+  const fields=el("rankLabelFields");fields.replaceChildren();
+  rankCodes.forEach(code=>{const wrap=document.createElement("div"),label=document.createElement("label"),input=document.createElement("input");label.textContent=code+" – Anzeigename";input.id="label_"+code;input.maxLength=40;input.value=rankLabels[code]||code;wrap.append(label,input);fields.append(wrap);});
+}
+el("saveRankLabels").addEventListener("click",async()=>{
+  const button=el("saveRankLabels");button.disabled=true;
+  for(const code of rankCodes){
+    const label=el("label_"+code).value.trim();
+    if(!label){message("rankLabelStatus","Bitte alle fünf Bezeichnungen ausfüllen.",true);button.disabled=false;return;}
+    const {error}=await db.rpc("set_nox7_rank_label",{p_rank_code:code,p_label:label});
+    if(error){message("rankLabelStatus","Speichern von "+code+" fehlgeschlagen: "+error.message,true);button.disabled=false;return;}
+    rankLabels[code]=label;
+  }
+  button.disabled=false;message("rankLabelStatus","Alle fünf Rangbezeichnungen wurden gespeichert.");
+});
 let memberView="active";
 async function loadMembers(){
   const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
@@ -104,9 +132,7 @@ async function loadMembers(){
   const active=all.filter(p=>(p.status||"active")==="active");
   el("countActive").textContent=active.length;
   el("countArchived").textContent=all.filter(p=>(p.status||"active")!=="active").length;
-  el("countR4").textContent=active.filter(p=>p.game_rank==="R4").length;
-  el("countR5").textContent=active.filter(p=>p.game_rank==="R5").length;
-  el("countMember").textContent=active.filter(p=>(p.game_rank||"Mitglied")==="Mitglied").length;
+  rankCodes.forEach(code=>{el("count"+code).textContent=active.filter(p=>p.game_rank===code).length;});
   const rows=all.filter(p=>(p.status||"active")===memberView);
   if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent=memberView==="active"?"Keine aktiven Mitglieder vorhanden.":"Das Archiv ist leer.";tr.append(td);body.append(tr);el("memberStatus").textContent="0 Profile.";return;}
   rows.forEach(p=>{
@@ -116,12 +142,12 @@ async function loadMembers(){
     const rankCell=document.createElement("td");
     if((p.status||"active")==="active"){
       const rank=document.createElement("select");rank.setAttribute("aria-label","Allianzrang für "+(p.display_name||"Mitglied"));
-      ["Mitglied","R4","R5"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;rank.append(o);});
-      rank.value=p.game_rank||"Mitglied";rankCell.append(rank);
+      rankCodes.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+" – "+(rankLabels[v]||v);rank.append(o);});
+      rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";rankCell.append(rank);
       const save=document.createElement("button");save.type="button";save.className="btn secondary";save.textContent="Speichern";
       save.addEventListener("click",async()=>{save.disabled=true;const {error}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:rank.value});save.disabled=false;if(error){message("memberStatus","Rangänderung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Rang von "+(p.display_name||"Mitglied")+" wurde aktualisiert.");await loadMembers();});
       rankCell.append(save);
-    }else rankCell.textContent=p.game_rank||"Mitglied";
+    }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");tr.append(power);
     const actions=document.createElement("td");
