@@ -265,8 +265,10 @@ async function loadNews(){if(!ready())return;const {data,error}=await supabaseCl
 async function loadPublicDonationRanking(){
   const panel=document.getElementById('publicDonationRanking'),body=document.getElementById('publicDonationRankingRows');
   panel.style.display='none';body.replaceChildren();if(!ready())return;
+  const {data:sessionData}=await supabaseClient.auth.getSession();
+  const isLoggedIn=!!sessionData?.session;
   const {data:enabled,error:settingError}=await supabaseClient.rpc('get_nox7_donation_ranking_setting');
-  if(settingError||enabled!==true)return;
+  if(settingError||(!isLoggedIn&&enabled!==true))return;
   const {data,error}=await supabaseClient.rpc('get_nox7_public_donation_ranking');
   if(error)return;
   if(!data||!data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=3;td.textContent='Noch keine freigegebenen Spendenpunkte in dieser Woche.';tr.append(td);body.append(tr);}
