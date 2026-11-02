@@ -266,21 +266,21 @@ async function loadMembers(preserveStatus=false){
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");
-    if((p.status||"active")==="active" && p.id!==ADMIN_ID){
-      const powerInput=document.createElement("input");powerInput.type="number";powerInput.min="0";powerInput.step="1";powerInput.value=p.power==null?"":String(p.power);powerInput.placeholder="Spielstärke";powerInput.setAttribute("aria-label","Spielstärke bearbeiten");powerInput.style.minWidth="125px";power.append(powerInput);power._powerInput=powerInput;
-      const savePower=document.createElement("button");savePower.type="button";savePower.className="btn secondary";savePower.textContent="Spielstärke speichern";savePower.style.marginTop="6px";
+    if((p.status||"active")==="active" && p.id===ADMIN_ID){
+      const powerInput=document.createElement("input");powerInput.type="number";powerInput.min="0";powerInput.step="1";powerInput.value=p.power==null?"":String(p.power);powerInput.placeholder="ADMIN-Spielstärke";powerInput.setAttribute("aria-label","ADMIN-Spielstärke bearbeiten");powerInput.style.minWidth="125px";power.append(powerInput);power._powerInput=powerInput;
+      const savePower=document.createElement("button");savePower.type="button";savePower.className="btn secondary";savePower.textContent="ADMIN-Spielstärke speichern";savePower.style.marginTop="6px";
       savePower.addEventListener("click",async()=>{
         const raw=powerInput.value.trim(),value=Number(raw);
         if(raw===""||!Number.isSafeInteger(value)||value<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
-        if(!confirm("Spielstärke von "+(p.display_name||"Mitglied")+" auf "+value.toLocaleString("de-AT")+" setzen?"))return;
-        savePower.disabled=true;message("memberStatus","Speichere Spielstärke für "+(p.display_name||"Mitglied")+" …");
+        if(!confirm( "Spielstärke des ADMIN auf "+value.toLocaleString("de-AT")+" setzen?"))return;
+        savePower.disabled=true;message("memberStatus","Speichere ADMIN-Spielstärke …");
         try{
           const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:name._nameInput?.value.trim()||p.display_name||"Mitglied",p_power:value});
-          if(error){message("memberStatus","Spielstärke konnte nicht gespeichert werden: "+error.message,true);return;}
+          if(error){message("memberStatus", "ADMIN-Spielstärke konnte nicht gespeichert werden: "+error.message,true);return;}
           const {data:check,error:checkError}=await db.from("profiles").select("power").eq("id",p.id).maybeSingle();
           if(checkError){message("memberStatus","Gespeichert, Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
           if(!check||Number(check.power)!==value){message("memberStatus","Spielstärke wurde nicht korrekt übernommen. Datenbankwert: "+(check?.power??"unbekannt"),true);return;}
-          message("memberStatus","ERFOLG: Spielstärke für "+(p.display_name||"Mitglied")+" auf "+value.toLocaleString("de-AT")+" gesetzt.");
+          message("memberStatus", "ERFOLG: ADMIN-Spielstärke wurde auf "+value.toLocaleString("de-AT")+" gesetzt.");
           await loadMembers(true);
         }catch(err){message("memberStatus","Speichern fehlgeschlagen: "+(err.message||String(err)),true);}
         finally{savePower.disabled=false;}
