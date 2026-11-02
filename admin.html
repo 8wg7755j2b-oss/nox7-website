@@ -17,7 +17,7 @@ header{border-bottom:1px solid var(--line);background:#080d18ed}.top{max-width:1
 h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:8px 0 12px}h2{margin:5px 0 12px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.stat strong{display:block;color:var(--cyan);font-size:28px}
 label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:100%;background:#080f1c;border:1px solid #344862;border-radius:8px;color:white;padding:11px;margin:5px 0 12px}textarea{min-height:110px;resize:vertical}
-.notice{padding:12px;background:#12313a;border:1px solid #24606a;border-radius:8px;color:#b7f5ed;margin:12px 0}.error{background:#381d27;border-color:#754050;color:#ffd2dc}
+.notice{padding:12px;background:#12313a;border:1px solid #24606a;border-radius:8px;color:#b7f5ed;margin:12px 0;min-height:44px;white-space:pre-wrap}.error{background:#381d27;border-color:#754050;color:#ffd2dc}#memberStatus{display:block!important;min-height:48px;margin:14px 0;font-weight:700}
 .hidden{display:none!important}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:480px}td,th{text-align:left;padding:11px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase}
 .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.badge{display:inline-block;border:1px solid #3d7189;border-radius:30px;padding:3px 9px;font-size:11px;color:#a8efff}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.wrap{padding:18px 14px}}
@@ -124,7 +124,7 @@ el("saveRankLabels").addEventListener("click",async()=>{
   button.disabled=false;message("rankLabelStatus","Alle fünf Rangbezeichnungen wurden gespeichert.");
 });
 let memberView="active";
-async function loadMembers(){
+async function loadMembers(preserveStatus=false){
   const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
   const body=el("memberRows");body.replaceChildren();
   if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Mitglieder konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);message("memberStatus","Mitglieder konnten nicht geladen werden: "+error.message,true);return;}
@@ -171,8 +171,8 @@ async function loadMembers(){
         const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
         edit.disabled=false;
         if(error){message("memberStatus","Mitgliedsdaten konnten nicht gespeichert werden: "+error.message,true);return;}
-        message("memberStatus","Name und Spielstärke von "+newName+" wurden gespeichert.");
-        await loadMembers();
+        await loadMembers(true);
+        message("memberStatus","Erfolgreich gespeichert: Name und Spielstärke von "+newName+" wurden aktualisiert.");
       });
       actions.append(edit);
       const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
@@ -187,7 +187,7 @@ async function loadMembers(){
     }else actions.textContent="Geschützt";
     tr.append(actions);body.append(tr);
   });
-  el("memberStatus").textContent=rows.length+" "+(memberView==="active"?"aktive Mitglieder":"archivierte Mitglieder")+" angezeigt.";
+  if(!preserveStatus)el("memberStatus").textContent=rows.length+" "+(memberView==="active"?"aktive Mitglieder":"archivierte Mitglieder")+" angezeigt.";
 }
 el("showActive").addEventListener("click",()=>{memberView="active";loadMembers();});
 el("showArchived").addEventListener("click",()=>{memberView="archived";loadMembers();});
