@@ -176,8 +176,8 @@ el("saveOwnAdminProfile").addEventListener("click",async()=>{
   button.disabled=true;
   message("ownAdminStatus","Speichere eigenes ADMIN-Profil …");
   try{
-    const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:ADMIN_ID,p_game_rank:newRank});
-    if(rankError){message("ownAdminStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message+". Name und Spielstärke wurden noch nicht geändert.",true);return;}
+    const rankResult = newRank==="R5" ? await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:ADMIN_ID}) : await db.rpc("set_nox7_game_rank",{p_user_id:ADMIN_ID,p_game_rank:newRank});
+    if(rankResult.error){message("ownAdminStatus","Allianzrang konnte nicht gespeichert werden: "+rankResult.error.message+". Name und Spielstärke wurden noch nicht geändert.",true);return;}
     const {error:profileError}=await db.from("profiles").update({display_name:newName,power:newPower}).eq("id",ADMIN_ID);
     if(profileError){message("ownAdminStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileSaveError(profileError),true);return;}
     const {data:check,error:checkError}=await db.from("profiles").select("display_name,power,game_rank,role").eq("id",ADMIN_ID).maybeSingle();
@@ -274,8 +274,8 @@ async function loadMembers(preserveStatus=false){
         try{
           if(newRank!==p.game_rank){
             if(!currentAccessIsAdmin && p.id===currentAccessUserId){message("memberStatus","Der eigene Allianzrang kann nicht geändert werden.",true);return;}
-            const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:newRank});
-            if(rankError){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message,true);return;}
+            const rankResult = newRank==="R5" ? await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:p.id}) : await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:newRank});
+            if(rankResult.error){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankResult.error.message,true);return;}
           }
           const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
           if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+profileSaveError(error),true);return;}
