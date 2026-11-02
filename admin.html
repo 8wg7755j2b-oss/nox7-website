@@ -191,7 +191,7 @@ el("saveOwnAdminProfile").addEventListener("click",async()=>{
   finally{button.disabled=false;}
 });
 el("r5TransferButton").addEventListener("click",async()=>{
-  if(currentAccessRole!=="R5"){message("r5TransferStatus","Nur der aktuelle R5 kann die Übergabe ausführen.",true);return;}
+  if(currentAccessRole!=="R5" && !currentAccessIsAdmin){message("r5TransferStatus","Nur der aktuelle R5 oder ADMIN kann die Übergabe ausführen.",true);return;}
   const targetId=el("r5TransferTarget").value;
   if(!targetId){message("r5TransferStatus","Bitte zuerst ein aktives Mitglied auswählen.",true);return;}
   const targetName=el("r5TransferTarget").selectedOptions[0]?.textContent||"ausgewähltes Mitglied";
@@ -213,7 +213,7 @@ async function loadMembers(preserveStatus=false){
   const all=data||[];
   const active=all.filter(p=>(p.status||"active")==="active");
   const transferPanel=el("r5TransferPanel");
-  if(currentAccessRole==="R5"){
+  if(currentAccessRole==="R5" || currentAccessIsAdmin){
     show("r5TransferPanel");
     const target=el("r5TransferTarget");
     const selected=target.value;
