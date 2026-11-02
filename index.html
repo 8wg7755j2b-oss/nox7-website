@@ -163,19 +163,19 @@ async function loadApprovedDailyStats(){
   const weekDates=Array.from({length:6},(_,i)=>{const d=new Date(mondayUTC.getTime()+i*86400000);return d.toISOString().slice(0,10)});
   const weekdays=['Mo','Di','Mi','Do','Fr','Sa'];
   head.replaceChildren();
-  ['Mitglied',...weekDates.map((d,i)=>weekdays[i]+' '+d.slice(8,10)+'.'+d.slice(5,7)),'VS Woche aktuell'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
+  ['Mitglied',...weekdays,'VS Woche aktuell','Spenden Woche gesamt'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
   const totals=new Map();
   (data||[]).forEach(r=>{
-    const v=totals.get(r.user_id)||{weekVs:0,days:{}};
-    const vs=Number(r.vs_points)||0;
-    if(r.report_date>=weekStart&&r.report_date<=utcToday){v.weekVs+=vs;v.days[r.report_date]=(v.days[r.report_date]||0)+vs}
+    const v=totals.get(r.user_id)||{weekVs:0,weekDon:0,days:{}};
+    const vs=Number(r.vs_points)||0,don=Number(r.donation_points)||0;
+    if(r.report_date>=weekStart&&r.report_date<=utcToday){v.weekVs+=vs;v.weekDon+=don;v.days[r.report_date]=(v.days[r.report_date]||0)+vs}
     totals.set(r.user_id,v);
   });
-  if(!totals.size){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=8;td.textContent='Noch keine freigegebenen Meldungen.';tr.append(td);body.append(tr);return}
+  if(!totals.size){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=9;td.textContent='Noch keine freigegebenen Meldungen.';tr.append(td);body.append(tr);return}
   const ids=[...totals.keys()],{data:profiles}=await supabaseClient.from('profiles').select('id,display_name').in('id',ids);const names=new Map((profiles||[]).map(p=>[p.id,p.display_name||'NOX7-Mitglied']));
   [...totals.entries()].sort((a,b)=>b[1].weekVs-a[1].weekVs).forEach(([id,v])=>{
     const tr=document.createElement('tr');
-    const values=[names.get(id)||'Mitglied',...weekDates.map(d=>(v.days[d]||0).toLocaleString('de-AT')),v.weekVs.toLocaleString('de-AT')];
+    const values=[names.get(id)||'Mitglied',...weekDates.map(d=>(v.days[d]||0).toLocaleString('de-AT')),v.weekVs.toLocaleString('de-AT'),v.weekDon.toLocaleString('de-AT')];
     values.forEach(x=>{const td=document.createElement('td');td.textContent=x;tr.append(td)});body.append(tr);
   });
 }
