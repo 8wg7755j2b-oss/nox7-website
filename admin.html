@@ -269,6 +269,9 @@ async function loadMembers(preserveStatus=false){
         if(newName.length<2||newName.length>40){message("memberStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
         if(rawPower===""||!Number.isSafeInteger(newPower)||newPower<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
         if(!rankCodes.includes(newRank)){message("memberStatus","Bitte einen gültigen Allianzrang auswählen.",true);return;}
+        const archiveRequested=!!archiveCheckbox?.checked;
+        const archiveReason=archiveReasonSelect?.value||"left";
+        if(archiveRequested && !confirm("Änderungen speichern und "+newName+" als „"+({left:"Ausgetreten",kicked:"Entfernt",transferred:"Gewechselt"}[archiveReason])+"“ archivieren? Das Mitglied bleibt mit allen Statistiken im Archiv erhalten."))return;
         edit.disabled=true;
         message("memberStatus","Speichere Name, Spielstärke und Allianzrang für "+newName+" …");
         try{
@@ -285,19 +288,29 @@ async function loadMembers(preserveStatus=false){
           if(!check || Number(check.power)!==newPower || check.display_name!==newName || check.game_rank!==newRank){
             message("memberStatus","NICHT korrekt gespeichert. Datenbankwert: Name="+(check?.display_name||"unbekannt")+", Power="+(check?.power??"leer")+", Rang="+(check?.game_rank||"unbekannt")+".",true);return;
           }
-          message("memberStatus","ERFOLG: "+newName+" – Name, Spielstärke "+newPower.toLocaleString("de-AT")+" und Rang "+newRank+" wurden gespeichert und geprüft.");
+          if(archiveRequested){
+            const {error:archiveError}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:archiveReason});
+            if(archiveError){message("memberStatus","Name, Spielstärke und Rang wurden gespeichert, aber Archivieren ist fehlgeschlagen: "+archiveError.message,true);return;}
+            message("memberStatus","ERFOLG: "+newName+" wurde gespeichert und als "+({left:"Ausgetreten",kicked:"Entfernt",transferred:"Gewechselt"}[archiveReason])+" archiviert.");
+          }else{
+            message("memberStatus","ERFOLG: "+newName+" – Name, Spielstärke "+newPower.toLocaleString("de-AT")+" und Rang "+newRank+" wurden gespeichert und geprüft.");
+          }
           await loadMembers(true);
         }catch(err){message("memberStatus","Unerwarteter Speicherfehler: "+(err.message||String(err)),true);}
         finally{edit.disabled=false;}
       });
       actions.append(edit);
       const canArchive=(currentAccessIsAdmin || ["R4","R5"].includes(currentAccessRole)) && p.id!==currentAccessUserId && p.id!==ADMIN_ID && p.game_rank!=="R5" && (currentAccessIsAdmin || currentAccessRole==="R5" || ["R1","R2","R3"].includes(p.game_rank||"R1"));
+      let archiveCheckbox=null,archiveReasonSelect=null;
       if(canArchive){
-        const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
-        [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
-        const archive=document.createElement("button");archive.type="button";archive.className="btn secondary";archive.textContent="Archivieren";
-        archive.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" archivieren? Es bleibt mit allen Statistiken im Archiv erhalten."))return;archive.disabled=true;const {error}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:reason.value});archive.disabled=false;if(error){message("memberStatus","Archivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde archiviert.");await loadMembers();});
-        actions.append(reason,archive);
+        const archiveWrap=document.createElement("label");archiveWrap.style.display="inline-flex";archiveWrap.style.alignItems="center";archiveWrap.style.gap="6px";archiveWrap.style.margin="6px 0";
+        archiveCheckbox=document.createElement("input");archiveCheckbox.type="checkbox";archiveCheckbox.style.width="auto";archiveCheckbox.style.margin="0";archiveCheckbox.setAttribute("aria-label","Mitglied beim Speichern archivieren");
+        const archiveText=document.createElement("span");archiveText.textContent="Archivieren";
+        archiveWrap.append(archiveCheckbox,archiveText);
+        archiveReasonSelect=document.createElement("select");archiveReasonSelect.setAttribute("aria-label","Archivierungsgrund");archiveReasonSelect.style.minWidth="130px";archiveReasonSelect.disabled=true;
+        [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;archiveReasonSelect.append(o);});
+        archiveCheckbox.addEventListener("change",()=>{archiveReasonSelect.disabled=!archiveCheckbox.checked;});
+        actions.append(archiveWrap,archiveReasonSelect);
       }
     }else if((p.status||"active")!=="active" && currentAccessIsAdmin){
       const restore=document.createElement("button");restore.type="button";restore.className="btn secondary";restore.textContent="Reaktivieren";
