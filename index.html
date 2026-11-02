@@ -59,7 +59,7 @@ document.getElementById('dailyStatsForm').addEventListener('submit',async e=>{
   if(!date||!Number.isSafeInteger(vs)||vs<0||!Number.isSafeInteger(don)||don<0){status('dailyStatsStatus','Bitte Datum und gültige Punktwerte ab 0 eingeben.',true);return}
   button.disabled=true;status('dailyStatsStatus','Meldung wird eingereicht …');
   try{const {data,error}=await supabaseClient.rpc('submit_nox7_daily_stats',{p_report_date:date,p_vs_points:vs,p_donation_points:don,p_note:note||null});
-    if(error)throw error;status('dailyStatsStatus','Meldung eingereicht bzw. erneut eingereicht. Sie wartet jetzt auf die Freigabe durch R4, R5 oder Admin.');document.getElementById('statsNote').value='';await loadMyDailyStats(currentUser.id);await loadPendingDailyStats();
+    if(error)throw error;status('dailyStatsStatus','Meldung eingereicht bzw. erneut eingereicht. Sie wartet jetzt auf die Freigabe durch R4, R5 oder Admin.');document.getElementById('statsNote').value='';await loadMyDailyStats(currentUser.id);await loadPendingDailyStats();await loadApprovedDailyStats();
   }catch(err){status('dailyStatsStatus','Einreichen fehlgeschlagen: '+(err.message||String(err)),true)}finally{button.disabled=false}
 });
 async function loadMyDailyStats(userId){
