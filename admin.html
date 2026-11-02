@@ -55,9 +55,10 @@ label{display:block;margin-top:10px;color:#c5d0e2}input,textarea,select{width:10
 </form><div id="newsStatus" aria-live="polite"></div>
 </section>
 <section class="card">
-<div class="eyebrow">PERSONNEL</div><h2>Mitgliederübersicht</h2>
-<p class="muted">Diese erste Version zeigt vorhandene Profile nur an. Änderungen an Rollen oder Berechtigungen sind bewusst nicht über diese Seite möglich.</p>
-<div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Allianzrang</th><th>Spielstärke</th></tr></thead><tbody id="memberRows"><tr><td colspan="3">Wird geladen …</td></tr></tbody></table></div>
+<div class="eyebrow">PERSONNEL</div><h2>Mitgliederverwaltung</h2>
+<p class="muted">Allianzrang verwalten, Mitglieder archivieren und frühere Mitglieder reaktivieren. Systemrollen (ADMIN/R4/R5) werden hier nicht verändert.</p>
+<div class="actions"><button class="btn secondary" id="showActive" type="button">Aktive Mitglieder</button><button class="btn secondary" id="showArchived" type="button">Archiv</button></div>
+<div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Status</th><th>Allianzrang</th><th>Spielstärke</th><th>Aktionen</th></tr></thead><tbody id="memberRows"><tr><td colspan="5">Wird geladen …</td></tr></tbody></table></div>
 <div id="memberStatus" class="muted"></div>
 </section>
 </div>
@@ -93,14 +94,46 @@ async function checkAdmin(user){
   show("dashboard");show("logoutBtn");
   await loadMembers();
 }
+let memberView="active";
 async function loadMembers(){
-  const {data,error}=await db.from("profiles").select("display_name,game_rank,power").order("display_name",{ascending:true}).limit(200);
+  const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
   const body=el("memberRows");body.replaceChildren();
-  if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Mitglieder konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);return;}
-  if(!data || data.length===0){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Noch keine Profile vorhanden.";tr.append(td);body.append(tr);return;}
-  data.forEach(p=>{const tr=document.createElement("tr");[p.display_name||"NOX7-Mitglied",p.game_rank||"Mitglied",p.power==null?"—":Number(p.power).toLocaleString("de-AT")].forEach(value=>{const td=document.createElement("td");td.textContent=String(value);tr.append(td);});body.append(tr);});
-  el("memberStatus").textContent=data.length+" Profile angezeigt.";
+  if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Mitglieder konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);message("memberStatus","Mitglieder konnten nicht geladen werden: "+error.message,true);return;}
+  const rows=(data||[]).filter(p=>(p.status||"active")===memberView);
+  if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent=memberView==="active"?"Keine aktiven Mitglieder vorhanden.":"Das Archiv ist leer.";tr.append(td);body.append(tr);el("memberStatus").textContent="0 Profile.";return;}
+  rows.forEach(p=>{
+    const tr=document.createElement("tr");
+    const name=document.createElement("td");name.textContent=p.display_name||"NOX7-Mitglied";tr.append(name);
+    const statusCell=document.createElement("td");statusCell.textContent=(p.status||"active")==="active"?"Aktiv":p.status==="left"?"Ausgetreten":p.status==="kicked"?"Entfernt":"Gewechselt";tr.append(statusCell);
+    const rankCell=document.createElement("td");
+    if((p.status||"active")==="active"){
+      const rank=document.createElement("select");rank.setAttribute("aria-label","Allianzrang für "+(p.display_name||"Mitglied"));
+      ["Mitglied","R4","R5"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;rank.append(o);});
+      rank.value=p.game_rank||"Mitglied";rankCell.append(rank);
+      const save=document.createElement("button");save.type="button";save.className="btn secondary";save.textContent="Speichern";
+      save.addEventListener("click",async()=>{save.disabled=true;const {error}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:rank.value});save.disabled=false;if(error){message("memberStatus","Rangänderung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Rang von "+(p.display_name||"Mitglied")+" wurde aktualisiert.");await loadMembers();});
+      rankCell.append(save);
+    }else rankCell.textContent=p.game_rank||"Mitglied";
+    tr.append(rankCell);
+    const power=document.createElement("td");power.textContent=p.power==null?"—":Number(p.power).toLocaleString("de-AT");tr.append(power);
+    const actions=document.createElement("td");
+    if((p.status||"active")==="active" && p.id!==ADMIN_ID){
+      const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
+      [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
+      const archive=document.createElement("button");archive.type="button";archive.className="btn secondary";archive.textContent="Archivieren";
+      archive.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" archivieren?"))return;archive.disabled=true;const {error}=await db.rpc("archive_nox7_member",{p_user_id:p.id,p_reason:reason.value});archive.disabled=false;if(error){message("memberStatus","Archivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde archiviert.");await loadMembers();});
+      actions.append(reason,archive);
+    }else if((p.status||"active")!=="active"){
+      const restore=document.createElement("button");restore.type="button";restore.className="btn secondary";restore.textContent="Reaktivieren";
+      restore.addEventListener("click",async()=>{if(!confirm("Mitglied "+(p.display_name||"NOX7-Mitglied")+" wieder aktivieren?"))return;restore.disabled=true;const {error}=await db.rpc("reactivate_nox7_member",{p_user_id:p.id});restore.disabled=false;if(error){message("memberStatus","Reaktivierung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Mitglied wurde reaktiviert.");await loadMembers();});
+      actions.append(restore);
+    }else actions.textContent="Geschützt";
+    tr.append(actions);body.append(tr);
+  });
+  el("memberStatus").textContent=rows.length+" "+(memberView==="active"?"aktive Mitglieder":"archivierte Mitglieder")+" angezeigt.";
 }
+el("showActive").addEventListener("click",()=>{memberView="active";loadMembers();});
+el("showArchived").addEventListener("click",()=>{memberView="archived";loadMembers();});
 el("newsForm").addEventListener("submit",async event=>{
   event.preventDefault();
   const title=el("newsTitle").value.trim(),body=el("newsBody").value.trim(),kind=el("newsType").value;
