@@ -242,6 +242,28 @@ async function loadMembers(preserveStatus=false){
         finally{edit.disabled=false;}
       });
       actions.append(edit);
+      if(currentAccessRole==="R5" && p.id!==currentAccessUserId){
+        const transfer=document.createElement("button");
+        transfer.type="button";
+        transfer.className="btn secondary";
+        transfer.textContent="R5 übertragen";
+        transfer.addEventListener("click",async()=>{
+          const targetName=p.display_name||"NOX7-Mitglied";
+          if(!confirm("R5 wirklich an "+targetName+" übertragen?\\n\\nDer ausgewählte Spieler wird R5 und dein eigener Rang wird auf R1 gesetzt. Du verlierst danach den Zugriff auf den Admin-Bereich."))return;
+          transfer.disabled=true;
+          message("memberStatus","Übertrage R5 an "+targetName+" …");
+          try{
+            const {error}=await db.rpc("transfer_nox7_r5",{p_new_r5_user_id:p.id});
+            if(error){message("memberStatus","R5-Übergabe fehlgeschlagen: "+error.message,true);transfer.disabled=false;return;}
+            message("memberStatus","R5 wurde erfolgreich an "+targetName+" übertragen. Du wirst zur Hauptseite weitergeleitet …");
+            setTimeout(()=>{window.location.href="index.html";},1200);
+          }catch(err){
+            message("memberStatus","R5-Übergabe fehlgeschlagen: "+(err.message||String(err)),true);
+            transfer.disabled=false;
+          }
+        });
+        actions.append(transfer);
+      }
       if(currentAccessIsAdmin){
       const reason=document.createElement("select");reason.setAttribute("aria-label","Archivierungsgrund");
       [["left","Ausgetreten"],["kicked","Entfernt"],["transferred","Gewechselt"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;reason.append(o);});
