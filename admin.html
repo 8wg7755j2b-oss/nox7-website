@@ -188,9 +188,7 @@ async function loadMembers(preserveStatus=false){
       const rank=document.createElement("select");rank.setAttribute("aria-label","Allianzrang für "+(p.display_name||"Mitglied"));
       rankCodes.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v+" – "+(rankLabels[v]||v);rank.append(o);});
       rank.value=rankCodes.includes(p.game_rank)?p.game_rank:"R1";rankCell.append(rank);
-      const save=document.createElement("button");save.type="button";save.className="btn secondary";save.textContent="Speichern";
-      save.addEventListener("click",async()=>{save.disabled=true;const {error}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:rank.value});save.disabled=false;if(error){message("memberStatus","Rangänderung fehlgeschlagen: "+error.message,true);return;}message("memberStatus","Rang von "+(p.display_name||"Mitglied")+" wurde aktualisiert.");await loadMembers();});
-      rankCell.append(save);
+      rankCell.append(rank);
     }else rankCell.textContent=rankLabels[p.game_rank]||p.game_rank||"R1";
     tr.append(rankCell);
     const power=document.createElement("td");
@@ -200,26 +198,30 @@ async function loadMembers(preserveStatus=false){
     tr.append(power);
     const actions=document.createElement("td");
     if((p.status||"active")==="active" && p.id!==ADMIN_ID){
-      const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Änderungen speichern";
+      const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Alles speichern";
       edit.addEventListener("click",async()=>{
         const newName=name._nameInput?.value.trim()||"";
         const rawPower=power._powerInput?.value.trim()||"";
         const newPower=Number(rawPower);
+        const newRank=rank.value;
         if(newName.length<2||newName.length>40){message("memberStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
         if(rawPower===""||!Number.isSafeInteger(newPower)||newPower<0){message("memberStatus","Bitte eine gültige Spielstärke ab 0 eingeben.",true);return;}
+        if(!rankCodes.includes(newRank)){message("memberStatus","Bitte einen gültigen Allianzrang auswählen.",true);return;}
         edit.disabled=true;
-        message("memberStatus","Speichere Name und Spielstärke für "+newName+" …");
+        message("memberStatus","Speichere Name, Spielstärke und Allianzrang für "+newName+" …");
         try{
+          const {error:rankError}=await db.rpc("set_nox7_game_rank",{p_user_id:p.id,p_game_rank:newRank});
+          if(rankError){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankError.message,true);return;}
           const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:newPower});
-          if(error){message("memberStatus","FEHLER beim Speichern: "+error.message,true);return;}
-          message("memberStatus","Änderung von Supabase bestätigt. Prüfe gespeicherten Wert …");
-          await loadMembers();
-          const {data:check,error:checkError}=await db.from("profiles").select("display_name,power").eq("id",p.id).maybeSingle();
-          if(checkError){message("memberStatus","Änderung gesendet, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
-          if(!check || Number(check.power)!==newPower || check.display_name!==newName){
-            message("memberStatus","NICHT korrekt gespeichert. Datenbankwert: Name="+(check?.display_name||"unbekannt")+", Power="+(check?.power??"leer")+". Bitte Supabase-RPC und Datenbank prüfen.",true);return;
+          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Name/Spielstärke nicht: "+error.message,true);return;}
+          message("memberStatus","Änderungen bestätigt. Prüfe alle drei Werte …");
+          const {data:check,error:checkError}=await db.from("profiles").select("display_name,power,game_rank").eq("id",p.id).maybeSingle();
+          if(checkError){message("memberStatus","Gespeichert, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
+          if(!check || Number(check.power)!==newPower || check.display_name!==newName || check.game_rank!==newRank){
+            message("memberStatus","NICHT korrekt gespeichert. Datenbankwert: Name="+(check?.display_name||"unbekannt")+", Power="+(check?.power??"leer")+", Rang="+(check?.game_rank||"unbekannt")+".",true);return;
           }
-          message("memberStatus","ERFOLG: "+newName+" – Spielstärke "+newPower.toLocaleString("de-AT")+" wurde gespeichert und geprüft.");
+          message("memberStatus","ERFOLG: "+newName+" – Name, Spielstärke "+newPower.toLocaleString("de-AT")+" und Rang "+newRank+" wurden gespeichert und geprüft.");
+          await loadMembers(true);
         }catch(err){message("memberStatus","Unerwarteter Speicherfehler: "+(err.message||String(err)),true);}
         finally{edit.disabled=false;}
       });
