@@ -238,7 +238,9 @@ async function loadMembers(preserveStatus=false){
   rows.forEach(p=>{
     const tr=document.createElement("tr");
     const name=document.createElement("td");
-    name.textContent=p.display_name||"NOX7-Mitglied";
+    if(currentAccessIsAdmin && (p.status||"active")==="active" && p.game_rank!=="R5"){
+      const nameInput=document.createElement("input");nameInput.type="text";nameInput.maxLength=40;nameInput.value=p.display_name||"";nameInput.setAttribute("aria-label","Spielername bearbeiten");nameInput.style.minWidth="150px";name.append(nameInput);name._nameInput=nameInput;
+    }else name.textContent=p.display_name||"NOX7-Mitglied";
     tr.append(name);
     const statusCell=document.createElement("td");statusCell.textContent=(p.status||"active")==="active"?"Aktiv":p.status==="left"?"Ausgetreten":p.status==="kicked"?"Entfernt":"Gewechselt";tr.append(statusCell);
     const rankCell=document.createElement("td");
@@ -259,7 +261,7 @@ async function loadMembers(preserveStatus=false){
     if((p.status||"active")==="active" && p.game_rank!=="R5"){
       const edit=document.createElement("button");edit.type="button";edit.className="btn secondary";edit.textContent="Speichern";
       edit.addEventListener("click",async()=>{
-        const newName=p.display_name||"NOX7-Mitglied";
+        const newName=name._nameInput?.value.trim()||p.display_name||"NOX7-Mitglied";
         const newRank=rank.value;
         if(newName.length<2||newName.length>40){message("memberStatus","Spielername muss 2 bis 40 Zeichen haben.",true);return;}
         if(!rankCodes.includes(newRank)){message("memberStatus","Bitte einen gültigen Allianzrang auswählen.",true);return;}
@@ -267,7 +269,7 @@ async function loadMembers(preserveStatus=false){
         const archiveReason=archiveReasonSelect?.value||"left";
         if(archiveRequested && !confirm("Änderungen speichern und "+newName+" als „"+({left:"Ausgetreten",kicked:"Entfernt",transferred:"Gewechselt"}[archiveReason])+"“ archivieren? Das Mitglied bleibt mit allen Statistiken im Archiv erhalten."))return;
         edit.disabled=true;
-        message("memberStatus","Speichere Allianzrang für "+newName+" …");
+        message("memberStatus","Speichere Spielername und Allianzrang für "+newName+" …");
         try{
           if(newRank!==p.game_rank){
             if(!currentAccessIsAdmin && p.id===currentAccessUserId){message("memberStatus","Der eigene Allianzrang kann nicht geändert werden.",true);return;}
@@ -275,7 +277,7 @@ async function loadMembers(preserveStatus=false){
             if(rankResult.error){message("memberStatus","Allianzrang konnte nicht gespeichert werden: "+rankResult.error.message,true);return;}
           }
           const {error}=await db.rpc("update_nox7_member_details",{p_user_id:p.id,p_display_name:newName,p_power:p.power});
-          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Profildaten konnten nicht bestätigt werden: "+profileSaveError(error),true);return;}
+          if(error){message("memberStatus","Allianzrang wurde gespeichert, aber Spielername konnte nicht gespeichert werden: "+profileSaveError(error),true);return;}
           message("memberStatus","Änderungen bestätigt. Prüfe Rang und Profil …");
           const {data:check,error:checkError}=await db.from("profiles").select("display_name,game_rank").eq("id",p.id).maybeSingle();
           if(checkError){message("memberStatus","Gespeichert, aber Kontrolle fehlgeschlagen: "+checkError.message,true);return;}
