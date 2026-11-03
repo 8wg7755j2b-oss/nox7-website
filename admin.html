@@ -85,7 +85,19 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 <div class="card stat"><div class="eyebrow">R1</div><strong id="countR1">—</strong></div>
 <div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div>
 </section>
-<section class="card" id="adminPowerPage"><div class="eyebrow">LAST WAR · POWER LEADERBOARD</div><h2>Spielstärke & Squad-Kampfkraft</h2><p class="muted">Rangliste nach Gesamtkampfkraft mit den drei einzelnen Squad-Werten.</p><div class="actions" style="margin:12px 0"><button class="btn secondary" id="refreshAdminRanking" type="button">Rangliste aktualisieren</button><span class="muted" id="adminRankingUpdated" aria-live="polite"></span></div>
+<section class="card hidden" id="leadershipOwnProfile">
+<div class="eyebrow">LEADERSHIP · EIGENES SPIELERPROFIL</div><h2>Mein Profil, Squads & Helden</h2>
+<p class="muted">R4 und R5 können ihre Mitgliederdaten direkt hier pflegen – ohne in den Mitgliederbereich wechseln zu müssen.</p>
+<form id="leadershipProfileForm" class="grid">
+<div><label for="leadDisplayName">Spielername</label><input id="leadDisplayName" maxlength="40" required></div>
+<div><label for="leadPlayerPower">Gesamtkampfkraft</label><input id="leadPlayerPower" type="number" min="0" step="1"></div>
+<div><label for="leadSquad1Type">Squad 1 – Typ</label><select id="leadSquad1Type"><option value="">Typ auswählen</option><option>Panzer</option><option>Flugzeug</option><option>Rakete</option></select><label for="leadSquad1Power">Squad 1 – Kampfkraft</label><input id="leadSquad1Power" type="number" min="0" step="1"></div>
+<div><label for="leadSquad2Type">Squad 2 – Typ</label><select id="leadSquad2Type"><option value="">Typ auswählen</option><option>Panzer</option><option>Flugzeug</option><option>Rakete</option></select><label for="leadSquad2Power">Squad 2 – Kampfkraft</label><input id="leadSquad2Power" type="number" min="0" step="1"></div>
+<div><label for="leadSquad3Type">Squad 3 – Typ</label><select id="leadSquad3Type"><option value="">Typ auswählen</option><option>Panzer</option><option>Flugzeug</option><option>Rakete</option></select><label for="leadSquad3Power">Squad 3 – Kampfkraft</label><input id="leadSquad3Power" type="number" min="0" step="1"></div>
+<div style="grid-column:1/-1"><h3>Helden & Ausrüstung</h3><p class="muted">Squad öffnen und die 15 Helden samt Ausrüstung pflegen.</p><div id="leadHeroSquadAccordions"></div></div>
+<div style="grid-column:1/-1"><button class="btn" type="submit">Profil & Helden speichern</button></div>
+</form><div id="leadershipProfileStatus" class="notice" role="status" aria-live="polite"></div>
+</section><section class="card" id="adminPowerPage"><div class="eyebrow">LAST WAR · POWER LEADERBOARD</div><h2>Spielstärke & Squad-Kampfkraft</h2><p class="muted">Rangliste nach Gesamtkampfkraft mit den drei einzelnen Squad-Werten.</p><div class="actions" style="margin:12px 0"><button class="btn secondary" id="refreshAdminRanking" type="button">Rangliste aktualisieren</button><span class="muted" id="adminRankingUpdated" aria-live="polite"></span></div>
 <h3>Spielstärke</h3>
 <div class="tablewrap"><table><thead><tr><th>Platz</th><th>Spieler</th><th>Allianzrang</th><th>Gesamtkampfkraft</th><th>Squad 1 · Typ / KP</th><th>Squad 2 · Typ / KP</th><th>Squad 3 · Typ / KP</th><th>Helden & Ausrüstung</th></tr></thead><tbody id="adminPowerRankingRows"><tr><td colspan="7">Rangliste wird geladen …</td></tr></tbody></table></div>
 </section>
@@ -208,6 +220,8 @@ async function checkAdmin(user){
     el("adminOwnRank").value=rankCodes.includes(data.game_rank)?data.game_rank:"R5";
   }
   if(isAdmin) await loadRankLabels();
+  show("leadershipOwnProfile");
+  await loadLeadershipOwnProfile();
   await loadMembers();
   await loadAdminRanking();
   if(isAdmin || isLeadership){show("manualStatsPanel");show("dailyStatsReviewPanel");await loadManualStatsMembers();await loadPendingDailyStats();}
@@ -372,6 +386,65 @@ el("manualStatsForm").addEventListener("submit",async event=>{
     await loadAdminRanking();
   }catch(err){message("manualStatsStatus","Eintragen fehlgeschlagen: "+(err.message||String(err)),true);}
   finally{button.disabled=false;}
+});
+const NOX_GEAR_PARTS=["Waffe","Rüstung","Chip","Radar"];
+function emptyHeroRoster(){return Array.from({length:3},()=>Array.from({length:5},()=>({name:"",gear:{Waffe:{stars:"",level:""},Rüstung:{stars:"",level:""},Chip:{stars:"",level:""},Radar:{stars:"",level:""}}})))}
+function renderHeroRoster(value,rootId="heroSquadAccordions"){
+ const root=document.getElementById(rootId);if(!root)return;
+ const roster=Array.isArray(value)&&value.length===3?value:emptyHeroRoster();root.replaceChildren();
+ roster.forEach((squad,si)=>{
+  const squadBox=document.createElement("div");squadBox.className="hero-squad";squadBox.style.cssText="border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:10px;background:#0d1626";
+  const squadButton=document.createElement("button");squadButton.type="button";squadButton.className="btn secondary";squadButton.style.cssText="display:block;width:100%;text-align:left;margin:0";squadButton.textContent="＋ Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";
+  const squadContent=document.createElement("div");squadContent.className="hero-squad-content";squadContent.style.display="none";squadButton.addEventListener("click",()=>{const isClosed=squadContent.style.display==="none";squadContent.style.display=isClosed?"block":"none";squadButton.textContent=(isClosed?"− ":"＋ ")+"Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";});
+  squadBox.append(squadButton,squadContent);
+  (squad||[]).forEach((hero,hi)=>{
+   const heroBox=document.createElement("div");heroBox.style.cssText="border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:10px;background:#111c2e";
+   const heroButton=document.createElement("button");heroButton.type="button";heroButton.className="btn secondary";heroButton.style.cssText="display:block;width:100%;text-align:left";heroButton.textContent="＋ Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");
+   const heroContent=document.createElement("div");heroContent.style.cssText="padding-top:10px;display:none";
+   heroButton.addEventListener("click",()=>{const isClosed=heroContent.style.display==="none";heroContent.style.display=isClosed?"block":"none";heroButton.textContent=(isClosed?"− ":"＋ ")+"Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");});
+   const nameLabel=document.createElement("label");nameLabel.textContent="Heldenname";heroContent.append(nameLabel);
+   const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";name.addEventListener("input",()=>{heroButton.textContent=(heroContent.style.display==="none"?"＋ ":"− ")+"Held "+(hi+1)+(name.value.trim()?" · "+name.value.trim():" · nicht eingetragen")});heroContent.append(name);
+   const grid=document.createElement("div");grid.className="formgrid";
+   NOX_GEAR_PARTS.forEach(part=>{
+    const wrap=document.createElement("div");const label=document.createElement("label");label.textContent=part+" – Sterne";wrap.append(label);
+    const stars=document.createElement("select");stars.setAttribute("aria-label",part+" Sterne");stars.dataset.gearStars=part;
+    const empty=document.createElement("option");empty.value="";empty.textContent="Sterne auswählen";stars.append(empty);
+    for(let n=1;n<=5;n++){const o=document.createElement("option");o.value=String(n);o.textContent=n+" ★";stars.append(o)}
+    stars.value=hero?.gear?.[part]?.stars??"";wrap.append(stars);
+    const levelLabel=document.createElement("label");levelLabel.textContent=part+" – Level";wrap.append(levelLabel);
+    const level=document.createElement("input");level.type="number";level.min="0";level.max="999";level.step="1";level.placeholder="Level";level.setAttribute("aria-label",part+" Level");level.dataset.gearLevel=part;level.value=hero?.gear?.[part]?.level??"";wrap.append(level);grid.append(wrap);
+   });
+   heroContent.append(grid);heroBox.append(heroButton,heroContent);squadContent.append(heroBox);
+  });
+  root.append(squadBox);
+ });
+}
+function collectLeadershipHeroRoster(){
+ return Array.from(document.querySelectorAll("#leadHeroSquadAccordions .hero-squad")).map(squad=>Array.from(squad.querySelectorAll(":scope .hero-squad-content > div")).map(hero=>{
+  const result={name:hero.querySelector("[data-hero-name]").value.trim(),gear:{}};
+  NOX_GEAR_PARTS.forEach(part=>{result.gear[part]={stars:hero.querySelector('[data-gear-stars="'+part+'"]').value||null,level:hero.querySelector('[data-gear-level="'+part+'"]').value===""?null:Number(hero.querySelector('[data-gear-level="'+part+'"]').value)}});return result;
+ }));
+}
+
+async function loadLeadershipOwnProfile(){
+ const {data,error}=await db.from("profiles").select("display_name,power,squad1_power,squad2_power,squad3_power,squad1_type,squad2_type,squad3_type,squad_heroes").eq("id",currentAccessUserId).maybeSingle();
+ if(error){message("leadershipProfileStatus","Profil konnte nicht geladen werden: "+error.message,true);return;}
+ if(!data)return;
+ el("leadDisplayName").value=data.display_name||"";
+ el("leadPlayerPower").value=data.power??"";
+ [1,2,3].forEach(n=>{el("leadSquad"+n+"Power").value=data["squad"+n+"_power"]??"";el("leadSquad"+n+"Type").value=data["squad"+n+"_type"]||"";});
+ renderHeroRoster(data.squad_heroes,"leadHeroSquadAccordions");
+}
+el("leadershipProfileForm").addEventListener("submit",async e=>{
+ e.preventDefault();const button=e.submitter;const name=el("leadDisplayName").value.trim();
+ const raw=[el("leadPlayerPower").value,el("leadSquad1Power").value,el("leadSquad2Power").value,el("leadSquad3Power").value];
+ const nums=raw.map(v=>v.trim()===""?null:Number(v));
+ if(name.length<2||name.length>40||nums.some(v=>v!==null&&(!Number.isSafeInteger(v)||v<0))){message("leadershipProfileStatus","Bitte Namen und Kampfkraftwerte prüfen.",true);return;}
+ const payload={display_name:name,power:nums[0],squad1_power:nums[1],squad2_power:nums[2],squad3_power:nums[3],squad1_type:el("leadSquad1Type").value||null,squad2_type:el("leadSquad2Type").value||null,squad3_type:el("leadSquad3Type").value||null,squad_heroes:collectLeadershipHeroRoster()};
+ button.disabled=true;message("leadershipProfileStatus","Profil wird gespeichert …");
+ try{const {data,error}=await db.from("profiles").update(payload).eq("id",currentAccessUserId).select("id").maybeSingle();if(error)throw error;if(!data)throw new Error("Keine Änderung möglich – bitte Supabase-Berechtigungen prüfen.");message("leadershipProfileStatus","Profil, Squads und Helden wurden gespeichert.");await loadAdminRanking();}
+ catch(err){message("leadershipProfileStatus","Speichern fehlgeschlagen: "+(err.message||String(err)),true);}
+ finally{button.disabled=false;}
 });
 async function loadPendingDailyStats(){
   const body=el("pendingDailyStatsRows");if(!body)return;body.replaceChildren();
