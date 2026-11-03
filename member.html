@@ -194,7 +194,7 @@ function renderHeroRoster(valuefalse) {
  });
 }
 function collectHeroRoster(){
- return Array.from(document.querySelectorAll("#heroSquadAccordions .hero-squad")).map(squad=>Array.from(squad.querySelectorAll(":scope .hero-squad-content > div")).map(hero=>{
+ return Array.from(document.querySelectorAll("#heroSquadAccordions .hero-squad")).map(squad=>Array.from(squad.querySelectorAll(":scope > .hero-entry")).map(hero=>{
   const result={name:hero.querySelector("[data-hero-name]").value.trim(),gear:{}};
   NOX_GEAR_PARTS.forEach(part=>{result.gear[part]={stars:hero.querySelector('[data-gear-stars="'+part+'"]').value||null,level:hero.querySelector('[data-gear-level="'+part+'"]').value===""?null:Number(hero.querySelector('[data-gear-level="'+part+'"]').value)}});return result;
  }));
