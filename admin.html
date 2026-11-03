@@ -441,27 +441,30 @@ async function loadPowerHistoryMembers(){
  if(current&&[...select.options].some(o=>o.value===current))select.value=current;
 }
 async function loadPowerHistory(){
- const userId=el("powerHistoryMember").value,body=el("powerHistoryRows"),chart=el("powerHistoryChart");
+ const userId=el("powerHistoryMember").value,metric=el("powerHistoryMetric").value,body=el("powerHistoryRows"),chart=el("powerHistoryChart");
  body.replaceChildren();chart.replaceChildren();
  if(!userId){message("powerHistorySummary","Bitte zuerst ein Mitglied auswählen.");return;}
- message("powerHistorySummary","Entwicklung wird geladen …");
- const {data,error}=await db.from("nox7_power_history").select("power,recorded_at").eq("user_id",userId).order("recorded_at",{ascending:true}).limit(500);
- if(error){message("powerHistorySummary","Verlauf nicht verfügbar: "+error.message+" · Wurde supabase/power-history.sql bereits im SQL-Editor ausgeführt?",true);return;}
- if(!data?.length){message("powerHistorySummary","Für dieses Mitglied gibt es noch keine gespeicherten Messpunkte.");return;}
- const values=data.map(d=>Number(d.power)).filter(Number.isFinite);
- const min=Math.min(...values),max=Math.max(...values),first=values[0],last=values[values.length-1],change=last-first;
- message("powerHistorySummary",data.length+" Messpunkte · Veränderung: "+(change>=0?"+":"")+change.toLocaleString("de-AT")+" KP · Aktueller Verlauf: "+last.toLocaleString("de-AT")+" KP");
- const width=760,height=230,pad={l:72,r:20,t:18,b:38},lo=Math.min(0,min),hi=Math.max(max,lo+1),range=hi-lo||1;
- const x=i=>pad.l+(data.length===1?0:i/(data.length-1))*(width-pad.l-pad.r);
- const y=v=>height-pad.b-((v-lo)/range)*(height-pad.t-pad.b);
- const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 "+width+" "+height);svg.setAttribute("role","img");svg.setAttribute("aria-label","Entwicklung der Gesamtkampfkraft");
- for(let k=0;k<=4;k++){const val=lo+(range*k/4),yy=y(val),line=document.createElementNS(ns,"line");line.setAttribute("x1",pad.l);line.setAttribute("x2",width-pad.r);line.setAttribute("y1",yy);line.setAttribute("y2",yy);line.setAttribute("stroke","currentColor");line.setAttribute("opacity",".15");svg.append(line);const txt=document.createElementNS(ns,"text");txt.setAttribute("x",pad.l-8);txt.setAttribute("y",yy+4);txt.setAttribute("text-anchor","end");txt.setAttribute("font-size","11");txt.setAttribute("fill","currentColor");txt.textContent=Math.round(val).toLocaleString("de-AT");svg.append(txt);}
- const poly=document.createElementNS(ns,"polyline");poly.setAttribute("fill","none");poly.setAttribute("stroke","#38bdf8");poly.setAttribute("stroke-width","3");poly.setAttribute("stroke-linecap","round");poly.setAttribute("stroke-linejoin","round");poly.setAttribute("points",data.map((d,i)=>x(i)+","+y(Number(d.power))).join(" "));svg.append(poly);
+ const label=metric==="total"?"Gesamtkampfkraft":"Squad "+metric;
+ message("powerHistorySummary",label+" wird geladen …");
+ const query=metric==="total"
+  ?db.from("nox7_power_history").select("power,recorded_at").eq("user_id",userId)
+  :db.from("nox7_squad_power_history").select("power,recorded_at").eq("user_id",userId).eq("squad_number",Number(metric));
+ const {data,error}=await query.order("recorded_at",{ascending:true}).limit(500);
+ if(error){message("powerHistorySummary","Verlauf nicht verfügbar: "+error.message+" · Bitte supabase/squad-power-history.sql im SQL-Editor ausführen.",true);return;}
+ if(!data?.length){message("powerHistorySummary","Für "+label+" gibt es noch keine Messpunkte.");return;}
+ const values=data.map(d=>Number(d.power)),min=Math.min(...values),max=Math.max(...values),change=values[values.length-1]-values[0];
+ message("powerHistorySummary",data.length+" Messpunkte · Veränderung: "+(change>=0?"+":"")+change.toLocaleString("de-AT")+" KP · Aktuell: "+values[values.length-1].toLocaleString("de-AT")+" KP · "+label);
+ const w=760,h=230,p={l:72,r:20,t:18,b:38},lo=Math.min(0,min),hi=Math.max(max,lo+1),range=hi-lo||1;
+ const x=i=>p.l+(data.length===1?0:i/(data.length-1))*(w-p.l-p.r),y=v=>h-p.b-(v-lo)/range*(h-p.t-p.b);
+ const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 "+w+" "+h);svg.setAttribute("role","img");svg.setAttribute("aria-label","Entwicklung "+label);
+ for(let k=0;k<=4;k++){const v=lo+range*k/4,yy=y(v),line=document.createElementNS(ns,"line");line.setAttribute("x1",p.l);line.setAttribute("x2",w-p.r);line.setAttribute("y1",yy);line.setAttribute("y2",yy);line.setAttribute("stroke","currentColor");line.setAttribute("opacity",".15");svg.append(line);const t=document.createElementNS(ns,"text");t.setAttribute("x",p.l-8);t.setAttribute("y",yy+4);t.setAttribute("text-anchor","end");t.setAttribute("font-size","11");t.setAttribute("fill","currentColor");t.textContent=Math.round(v).toLocaleString("de-AT");svg.append(t);}
+ const line=document.createElementNS(ns,"polyline");line.setAttribute("fill","none");line.setAttribute("stroke","#38bdf8");line.setAttribute("stroke-width","3");line.setAttribute("points",data.map((d,i)=>x(i)+","+y(Number(d.power))).join(" "));svg.append(line);
  data.forEach((d,i)=>{const c=document.createElementNS(ns,"circle");c.setAttribute("cx",x(i));c.setAttribute("cy",y(Number(d.power)));c.setAttribute("r",data.length>60?2.5:4);c.setAttribute("fill","#38bdf8");svg.append(c);});
  chart.append(svg);
  [...data].reverse().forEach(d=>{const tr=document.createElement("tr"),date=document.createElement("td"),power=document.createElement("td");date.textContent=new Date(d.recorded_at).toLocaleString("de-AT");power.textContent=Number(d.power).toLocaleString("de-AT")+" KP";tr.append(date,power);body.append(tr);});
 }
 el("powerHistoryMember").addEventListener("change",loadPowerHistory);
+el("powerHistoryMetric").addEventListener("change",loadPowerHistory);
 el("refreshPowerHistory").addEventListener("click",loadPowerHistory);
 async function loadLeadershipOwnProfile(){
  const {data,error}=await db.from("profiles").select("display_name,power,squad1_power,squad2_power,squad3_power,squad1_type,squad2_type,squad3_type,squad_heroes").eq("id",currentAccessUserId).maybeSingle();
