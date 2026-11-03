@@ -13,7 +13,7 @@
 <body>
 <header><div class="wrap nav"><a class="logo" href="index.html">NOX<span>7</span></a><nav><a href="index.html">Startseite</a><a href="index.html#team">Mitglieder</a><a href="index.html#news">News & Events</a><a href="index.html#ranking">Rangliste</a><a href="index.html#rules">Regeln</a></nav></div></header>
 <main class="wrap">
-<div class="hero"><div class="eyebrow">LAST WAR · SERVER 1653</div><h1>ALLIANZ-<em>INFORMATIONEN</em></h1><p class="lead">Willkommen bei NOX7. Hier findest du die wichtigsten Informationen zu unserer Gemeinschaft, unseren Regeln und dem gemeinsamen Spiel.</p><span class="pill">NOX7 · United in the Shadows</span><span class="pill">Serverzeit: UTC−2</span><span class="pill">Mehr als ein Team – eine Familie</span></div>
+<div class="hero"><div class="eyebrow">LAST WAR · SERVER 1653</div><h1>ALLIANZ-<em>INFORMATIONEN</em></h1><p class="lead">Willkommen bei NOX7. Hier findest du die wichtigsten Informationen zu unserer Gemeinschaft, unseren Regeln und dem gemeinsamen Spiel.</p><span class="pill">NOX7 · United in the Shadows</span><span class="pill">Serverzeit: UTC−2</span><span class="pill" id="serverClock">Serverzeit: --:--:--</span><span class="pill" id="localClock">Ortszeit: --:--:--</span><span class="pill">Mehr als ein Team – eine Familie</span></div>
 <section class="card" aria-labelledby="timeConvertTitle"><div class="eyebrow">ZEITUMRECHNER</div><h2 id="timeConvertTitle">Serverzeit → deine Ortszeit</h2><p>Gib Datum und Uhrzeit des Events in Serverzeit (UTC−2) ein. Der Rechner berücksichtigt automatisch die Sommer- und Winterzeit deines Geräts.</p><div class="converter"><div><label for="serverEventTime">Eventdatum und Serverzeit (UTC−2)</label><input id="serverEventTime" type="datetime-local"></div><button class="convertbtn" type="button" id="convertTimeBtn">In Ortszeit umrechnen</button></div><div id="localTimeResult" class="convertresult" aria-live="polite">Deine umgerechnete Ortszeit erscheint hier.</div><small class="muted" id="localZoneLabel"></small></section>
 <div class="grid">
 <article class="card"><h2><span class="number">01</span>Wer wir sind</h2><p>NOX7 steht für Zusammenhalt, Verlässlichkeit und gemeinsames Wachstum. Wir unterstützen einander, kommunizieren offen und treten als Team auf.</p><p>Jeder Kommandant trägt zum Erfolg der Allianz bei – im Alltag ebenso wie bei wichtigen Server- und Allianz-Events.</p></article>
@@ -44,6 +44,18 @@
    const formatted=new Intl.DateTimeFormat('de-AT',{dateStyle:'full',timeStyle:'short',timeZone:localZone}).format(instant);
    result.textContent='Deine Ortszeit: '+formatted;
  });
+})();
+</script><script>
+(function(){
+ const server=document.getElementById('serverClock');
+ const local=document.getElementById('localClock');
+ const fmt=(date,zone)=>new Intl.DateTimeFormat('de-AT',{timeZone:zone,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(date);
+ function tick(){
+   const now=new Date();
+   if(server) server.textContent='Serverzeit: '+fmt(now,'Etc/GMT+2')+' (UTC−2)';
+   if(local) local.textContent='Ortszeit: '+fmt(now,Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Vienna');
+ }
+ tick(); setInterval(tick,1000);
 })();
 </script></body>
 </html>
