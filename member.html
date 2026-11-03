@@ -132,28 +132,34 @@ function renderHeroRoster(value){
  const root=document.getElementById("heroSquadAccordions");if(!root)return;
  const roster=Array.isArray(value)&&value.length===3?value:emptyHeroRoster();root.replaceChildren();
  roster.forEach((squad,si)=>{
-  const squadDetails=document.createElement("details");squadDetails.className="hero-squad";squadDetails.style.cssText="border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:10px;background:#0d1626";
-  const summary=document.createElement("summary");summary.textContent="Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";summary.style.cssText="cursor:pointer;font-weight:800;color:var(--cyan);padding:7px;display:list-item;pointer-events:auto";summary.addEventListener("click",event=>{event.preventDefault();squadDetails.open=!squadDetails.open;});squadDetails.append(summary);
+  const squadBox=document.createElement("div");squadBox.className="hero-squad";squadBox.style.cssText="border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:10px;background:#0d1626";
+  const squadButton=document.createElement("button");squadButton.type="button";squadButton.className="btn secondary";squadButton.style.cssText="display:block;width:100%;text-align:left;margin:0";squadButton.textContent="＋ Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";
+  const squadContent=document.createElement("div");squadContent.hidden=true;squadContent.className="hero-squad-content";squadButton.addEventListener("click",()=>{squadContent.hidden=!squadContent.hidden;squadButton.textContent=(squadContent.hidden?"＋ ":"− ")+"Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";});
+  squadBox.append(squadButton,squadContent);
   (squad||[]).forEach((hero,hi)=>{
-   const hd=document.createElement("details");hd.style.cssText="border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:10px;background:#111c2e";
-   const hs=document.createElement("summary");hs.textContent="Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");hs.style.cssText="cursor:pointer;font-weight:700;padding:5px;display:list-item;pointer-events:auto";hs.addEventListener("click",event=>{event.preventDefault();hd.open=!hd.open;});hd.append(hs);
-   const nameLabel=document.createElement("label");nameLabel.textContent="Heldenname";hd.append(nameLabel);
-   const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";hd.append(name);
+   const heroBox=document.createElement("div");heroBox.style.cssText="border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:10px;background:#111c2e";
+   const heroButton=document.createElement("button");heroButton.type="button";heroButton.className="btn secondary";heroButton.style.cssText="display:block;width:100%;text-align:left";heroButton.textContent="＋ Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");
+   const heroContent=document.createElement("div");heroContent.hidden=true;heroContent.style.cssText="padding-top:10px";
+   heroButton.addEventListener("click",()=>{heroContent.hidden=!heroContent.hidden;heroButton.textContent=(heroContent.hidden?"＋ ":"− ")+"Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");});
+   const nameLabel=document.createElement("label");nameLabel.textContent="Heldenname";heroContent.append(nameLabel);
+   const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";name.addEventListener("input",()=>{heroButton.textContent=(heroContent.hidden?"＋ ":"− ")+"Held "+(hi+1)+(name.value.trim()?" · "+name.value.trim():" · nicht eingetragen")});heroContent.append(name);
    const grid=document.createElement("div");grid.className="formgrid";
    NOX_GEAR_PARTS.forEach(part=>{
-    const wrap=document.createElement("div");const label=document.createElement("label");label.textContent=part;wrap.append(label);
+    const wrap=document.createElement("div");const label=document.createElement("label");label.textContent=part+" – Sterne";wrap.append(label);
     const stars=document.createElement("select");stars.setAttribute("aria-label",part+" Sterne");stars.dataset.gearStars=part;
-    const empty=document.createElement("option");empty.value="";empty.textContent="Sterne";stars.append(empty);
+    const empty=document.createElement("option");empty.value="";empty.textContent="Sterne auswählen";stars.append(empty);
     for(let n=1;n<=5;n++){const o=document.createElement("option");o.value=String(n);o.textContent=n+" ★";stars.append(o)}
     stars.value=hero?.gear?.[part]?.stars??"";wrap.append(stars);
+    const levelLabel=document.createElement("label");levelLabel.textContent=part+" – Level";wrap.append(levelLabel);
     const level=document.createElement("input");level.type="number";level.min="0";level.max="999";level.step="1";level.placeholder="Level";level.setAttribute("aria-label",part+" Level");level.dataset.gearLevel=part;level.value=hero?.gear?.[part]?.level??"";wrap.append(level);grid.append(wrap);
-   });hd.append(grid);squadDetails.append(hd);
+   });
+   heroContent.append(grid);heroBox.append(heroButton,heroContent);squadContent.append(heroBox);
   });
-  root.append(squadDetails);
+  root.append(squadBox);
  });
 }
 function collectHeroRoster(){
- return Array.from(document.querySelectorAll("#heroSquadAccordions > details")).map(squad=>Array.from(squad.querySelectorAll(":scope > details")).map(hero=>{
+ return Array.from(document.querySelectorAll("#heroSquadAccordions .hero-squad")).map(squad=>Array.from(squad.querySelectorAll(":scope .hero-squad-content > div")).map(hero=>{
   const result={name:hero.querySelector("[data-hero-name]").value.trim(),gear:{}};
   NOX_GEAR_PARTS.forEach(part=>{result.gear[part]={stars:hero.querySelector('[data-gear-stars="'+part+'"]').value||null,level:hero.querySelector('[data-gear-level="'+part+'"]').value===""?null:Number(hero.querySelector('[data-gear-level="'+part+'"]').value)}});return result;
  }));
