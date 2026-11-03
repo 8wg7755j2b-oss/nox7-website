@@ -40,11 +40,11 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
   .admin-shortcuts{position:fixed!important;top:12px!important;left:12px!important;right:auto!important;width:min(220px,calc(100vw - 24px))!important;max-height:calc(100vh - 24px)!important;margin:0!important}
   .nav-links{flex-direction:column!important;flex-wrap:nowrap!important}
   .admin-shortcuts a{display:flex!important;width:100%;white-space:normal!important}
-}body[data-admin-page="power"] #memberOverview,body[data-admin-page="power"] #adminRanking,body[data-admin-page="power"] #adminOnlyNews,body[data-admin-page="power"] #adminOnlyRankLabels,body[data-admin-page="power"] #adminOnlyProfile,body[data-admin-page="power"] #memberManagement{display:none!important}body:not([data-admin-page="power"]) #adminPowerPage{display:none!important}body[data-admin-page="power"] .admin-shortcuts a[href$="page=power"]{background:linear-gradient(100deg,#17384a,#14263a);border-color:#326078;color:#f5fbff;box-shadow:inset 0 0 0 1px #ffffff05}body[data-admin-page="power"] .admin-shortcuts a[href$="page=power"]:before{background:var(--cyan)}</style>
+}body[data-admin-page="power"] #memberOverview,body[data-admin-page="power"] #adminRanking,body[data-admin-page="power"] #adminOnlyNews,body[data-admin-page="power"] #adminOnlyRankLabels,body[data-admin-page="power"] #adminOnlyProfile,body[data-admin-page="power"] #memberManagement{display:none!important}body:not([data-admin-page="power"]) #adminPowerPage{display:none!important}body[data-admin-page="power"] .admin-shortcuts a[href$="page=power"]{background:linear-gradient(100deg,#17384a,#14263a);border-color:#326078;color:#f5fbff;box-shadow:inset 0 0 0 1px #ffffff05}body[data-admin-page="power"] .admin-shortcuts a[href$="page=power"]:before{background:var(--cyan)}.admin-clock{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.clock-readout{min-width:150px;text-align:right;line-height:1.25}.clock-caption{display:block;color:var(--cyan);font-size:10px;font-weight:850;letter-spacing:.14em}.clock-readout strong{display:block;font-size:22px;font-variant-numeric:tabular-nums}.clock-readout small{display:block;font-size:11px}@media(max-width:620px){.admin-clock{width:100%;justify-content:space-between}.clock-readout{text-align:left;min-width:120px}.admin-clock .btn{padding:8px 10px;font-size:12px}}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header><div class="top"><a class="logo" href="index.html">NOX<span>7</span></a><div class="actions"><a class="btn secondary" href="index.html">Öffentliche Website</a><button class="btn secondary hidden" id="logoutBtn">Abmelden</button></div></div></header>
+<header><div class="top"><a class="logo" href="index.html">NOX<span>7</span></a><div class="actions admin-clock"><div class="clock-readout"><span class="clock-caption" id="adminClockLabel">SERVERZEIT · UTC−2</span><strong id="adminClockValue">--:--:--</strong><small id="adminClockDate"></small></div><button class="btn secondary" type="button" id="toggleAdminClock">Lokale Zeit anzeigen</button><a class="btn secondary" href="index.html">Öffentliche Website</a><button class="btn secondary hidden" id="logoutBtn">Abmelden</button></div></div></header>
 <main class="wrap">
 <div class="eyebrow">LAST WAR · ALLIANCE 1653</div>
 <h1>ADMIN COMMAND CENTER</h1>
@@ -530,6 +530,25 @@ const requestedAdminPage=new URLSearchParams(window.location.search).get("page")
 document.body.dataset.adminPage=Object.prototype.hasOwnProperty.call(adminPageNames,requestedAdminPage)?requestedAdminPage:"overview";
 const adminPageHeading=document.querySelector("main h1");
 if(adminPageHeading)adminPageHeading.textContent="ADMIN · "+adminPageNames[document.body.dataset.adminPage].toUpperCase();
+
+const adminClockLabel=document.getElementById("adminClockLabel");
+const adminClockValue=document.getElementById("adminClockValue");
+const adminClockDate=document.getElementById("adminClockDate");
+const toggleAdminClock=document.getElementById("toggleAdminClock");
+let showLocalAdminTime=false;
+const localAdminZone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Vienna";
+function updateAdminClock(){
+ const now=new Date();
+ const zone=showLocalAdminTime?localAdminZone:"Etc/GMT+2";
+ adminClockLabel.textContent=showLocalAdminTime?"LOKALE ZEIT · "+localAdminZone.toUpperCase():"SERVERZEIT · UTC−2";
+ adminClockValue.textContent=new Intl.DateTimeFormat("de-AT",{timeZone:zone,hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(now);
+ adminClockDate.textContent=new Intl.DateTimeFormat("de-AT",{timeZone:zone,weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"}).format(now);
+ toggleAdminClock.textContent=showLocalAdminTime?"Serverzeit anzeigen":"Lokale Zeit anzeigen";
+}
+toggleAdminClock.addEventListener("click",()=>{showLocalAdminTime=!showLocalAdminTime;updateAdminClock();});
+updateAdminClock();
+setInterval(updateAdminClock,1000);
+
 start();
 </script>
 </body>
