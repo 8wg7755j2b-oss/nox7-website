@@ -132,7 +132,12 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 <div class="actions"><select id="r5TransferTarget" aria-label="Neuen R5 auswählen"><option value="">Mitglied auswählen …</option></select><button class="btn" id="r5TransferButton" type="button">R5 übertragen</button></div>
 <div id="r5TransferStatus" class="notice" role="status" aria-live="polite"></div>
 </div>
-<div class="card hidden" id="manualStatsPanel" style="margin:16px 0">
+<div class="card hidden" id="dailyStatsReviewPanel" style="margin:16px 0">
+<div class="eyebrow">LEADERSHIP · INBOX</div><h3>VS- und Tech-Spendenmeldungen prüfen</h3>
+<p class="muted">Offene Meldungen der Mitglieder bearbeiten, Werte bei Bedarf korrigieren und freigeben oder ablehnen.</p>
+<div class="tablewrap"><table><thead><tr><th>Mitglied</th><th>Datum</th><th>VS-Punkte</th><th>Tech-Spenden</th><th>Notiz</th><th>Status</th><th>Aktionen</th></tr></thead><tbody id="pendingDailyStatsRows"><tr><td colspan="7">Wird geladen …</td></tr></tbody></table></div>
+<div id="dailyStatsReviewStatus" class="notice" role="status" aria-live="polite"></div>
+</div><div class="card hidden" id="manualStatsPanel" style="margin:16px 0">
 <div class="eyebrow">LEADERSHIP · MANUELLE PUNKTEERFASSUNG</div>
 <h3>VS-Punkte und Tech-Spenden eintragen</h3>
 <p class="muted">Einträge durch ADMIN, R5 oder R4 werden direkt genehmigt. Ein vorhandener Eintrag desselben Mitglieds am selben Datum wird ersetzt.</p>
@@ -205,7 +210,7 @@ async function checkAdmin(user){
   if(isAdmin) await loadRankLabels();
   await loadMembers();
   await loadAdminRanking();
-  if(isAdmin || isLeadership){show("manualStatsPanel");await loadManualStatsMembers();}
+  if(isAdmin || isLeadership){show("manualStatsPanel");show("dailyStatsReviewPanel");await loadManualStatsMembers();await loadPendingDailyStats();}
 }
 async function loadAdminRanking(){
   const powerBody=el("adminPowerRankingRows"),weekBody=el("adminWeeklyRankingRows");
@@ -368,6 +373,50 @@ el("manualStatsForm").addEventListener("submit",async event=>{
   }catch(err){message("manualStatsStatus","Eintragen fehlgeschlagen: "+(err.message||String(err)),true);}
   finally{button.disabled=false;}
 });
+async function loadPendingDailyStats(){
+  const body=el("pendingDailyStatsRows");if(!body)return;body.replaceChildren();
+  const {data,error}=await db.from("nox7_daily_stats").select("id,user_id,report_date,vs_points,donation_points,note,status").eq("status","pending").order("submitted_at",{ascending:false}).limit(200);
+  if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=7;td.textContent="Meldungen konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);return;}
+  if(!data?.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=7;td.textContent="Keine offenen Anfragen vorhanden.";tr.append(td);body.append(tr);return;}
+  const ids=[...new Set(data.map(r=>r.user_id))];
+  const {data:profiles}=await db.from("profiles").select("id,display_name").in("id",ids);
+  const names=new Map((profiles||[]).map(p=>[p.id,p.display_name||"NOX7-Mitglied"]));
+  data.forEach(r=>{
+    const tr=document.createElement("tr");
+    [names.get(r.user_id)||"Mitglied",r.report_date].forEach(v=>{const td=document.createElement("td");td.textContent=String(v);tr.append(td);});
+    const vsCell=document.createElement("td"),donCell=document.createElement("td"),noteCell=document.createElement("td"),statusCell=document.createElement("td"),action=document.createElement("td");
+    const vs=document.createElement("input");vs.type="number";vs.min="0";vs.step="1";vs.value=String(r.vs_points);vs.setAttribute("aria-label","VS-Punkte bearbeiten");vsCell.append(vs);
+    const don=document.createElement("input");don.type="number";don.min="0";don.step="1";don.value=String(r.donation_points);don.setAttribute("aria-label","Tech-Spendenpunkte bearbeiten");donCell.append(don);
+    const note=document.createElement("input");note.maxLength=250;note.value=r.note||"";note.placeholder="Notiz";note.setAttribute("aria-label","Notiz bearbeiten");noteCell.append(note);
+    statusCell.textContent="Offen";
+    const save=document.createElement("button");save.type="button";save.className="btn secondary";save.textContent="Werte speichern";
+    save.addEventListener("click",async()=>{
+      const v=Number(vs.value),d=Number(don.value);
+      if(!Number.isSafeInteger(v)||v<0||!Number.isSafeInteger(d)||d<0){message("dailyStatsReviewStatus","Bitte gültige Punktwerte ab 0 eingeben.",true);return;}
+      save.disabled=true;message("dailyStatsReviewStatus","Änderungen werden gespeichert …");
+      try{
+        const {error}=await db.rpc("update_nox7_daily_stats_values",{p_entry_id:r.id,p_vs_points:v,p_donation_points:d,p_note:note.value.trim()||null});
+        if(error)throw error;
+        message("dailyStatsReviewStatus","Werte wurden gespeichert.");
+        await loadPendingDailyStats();await loadAdminRanking();
+      }catch(err){message("dailyStatsReviewStatus","Speichern fehlgeschlagen: "+(err.message||String(err)),true);}
+      finally{save.disabled=false;}
+    });
+    action.append(save);
+    [["Freigeben",true],["Ablehnen",false]].forEach(([label,approved])=>{
+      const b=document.createElement("button");b.type="button";b.className="btn secondary";b.textContent=label;b.style.margin="2px";
+      b.addEventListener("click",async()=>{
+        let noteText=null;if(!approved){noteText=window.prompt("Optionaler Ablehnungsgrund:");if(noteText===null)return;}
+        b.disabled=true;
+        const {error}=await db.rpc("review_nox7_daily_stats",{p_entry_id:r.id,p_approved:approved,p_review_note:noteText});
+        if(error){message("dailyStatsReviewStatus","Prüfung fehlgeschlagen: "+error.message,true);b.disabled=false;return;}
+        message("dailyStatsReviewStatus",approved?"Meldung freigegeben.":"Meldung abgelehnt.");
+        await loadPendingDailyStats();await loadAdminRanking();
+      });action.append(b);
+    });
+    tr.append(vsCell,donCell,noteCell,statusCell,action);body.append(tr);
+  });
+}
 let memberView="R5";
 async function loadMembers(preserveStatus=false){
   const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
