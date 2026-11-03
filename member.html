@@ -133,10 +133,10 @@ function renderHeroRoster(value){
  const roster=Array.isArray(value)&&value.length===3?value:emptyHeroRoster();root.replaceChildren();
  roster.forEach((squad,si)=>{
   const squadDetails=document.createElement("details");squadDetails.className="hero-squad";squadDetails.style.cssText="border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:10px;background:#0d1626";
-  const summary=document.createElement("summary");summary.textContent="Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";summary.style.cssText="cursor:pointer;font-weight:800;color:var(--cyan);padding:7px";squadDetails.append(summary);
+  const summary=document.createElement("summary");summary.textContent="Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";summary.style.cssText="cursor:pointer;font-weight:800;color:var(--cyan);padding:7px;display:list-item;pointer-events:auto";summary.addEventListener("click",event=>{event.preventDefault();squadDetails.open=!squadDetails.open;});squadDetails.append(summary);
   (squad||[]).forEach((hero,hi)=>{
    const hd=document.createElement("details");hd.style.cssText="border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:10px;background:#111c2e";
-   const hs=document.createElement("summary");hs.textContent="Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");hs.style.cssText="cursor:pointer;font-weight:700;padding:5px";hd.append(hs);
+   const hs=document.createElement("summary");hs.textContent="Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");hs.style.cssText="cursor:pointer;font-weight:700;padding:5px;display:list-item;pointer-events:auto";hs.addEventListener("click",event=>{event.preventDefault();hd.open=!hd.open;});hd.append(hs);
    const nameLabel=document.createElement("label");nameLabel.textContent="Heldenname";hd.append(nameLabel);
    const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";hd.append(name);
    const grid=document.createElement("div");grid.className="formgrid";
