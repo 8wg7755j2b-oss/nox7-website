@@ -402,23 +402,23 @@ function renderHeroRoster(value,rootId="heroSquadAccordions") {
  const root=document.getElementById(rootId);if(!root)return;
  const roster=Array.isArray(value)&&value.length===3?value:emptyHeroRoster();root.replaceChildren();
  roster.forEach((squad,si)=>{
-  const squadBox=document.createElement("section");squadBox.className="hero-squad";squadBox.style.cssText="border:1px solid var(--line);border-radius:10px;margin:14px 0;padding:12px;background:#0d1626;display:block;overflow:visible";
+  const squadBox=document.createElement("div");squadBox.className="hero-squad";squadBox.style.cssText="position:relative;z-index:1;pointer-events:auto;isolation:isolate;border:1px solid var(--line);border-radius:10px;margin:14px 0;padding:12px;background:#0d1626;display:block;overflow:visible";
   const heading=document.createElement("h3");heading.textContent="Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";heading.style.cssText="margin:0 0 12px;color:var(--gold)";squadBox.append(heading);
   (squad||[]).forEach((hero,hi)=>{
-   const heroBox=document.createElement("section");heroBox.className="hero-entry";heroBox.style.cssText="border:1px solid var(--line);border-radius:8px;margin:10px 0;padding:12px;background:#111c2e;display:block;visibility:visible";
+   const heroBox=document.createElement("div");heroBox.className="hero-entry";heroBox.style.cssText="position:relative;z-index:2;pointer-events:auto;border:1px solid var(--line);border-radius:8px;margin:10px 0;padding:12px;background:#111c2e;display:block;visibility:visible";
    const heroTitle=document.createElement("h4");heroTitle.textContent="Held "+(hi+1)+(hero?.name?" · "+hero.name:"");heroTitle.style.cssText="margin:0 0 8px;color:var(--cyan)";heroBox.append(heroTitle);
    const nameLabel=document.createElement("label");nameLabel.textContent="Heldenname";heroBox.append(nameLabel);
-   const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";name.addEventListener("input",()=>{heroTitle.textContent="Held "+(hi+1)+(name.value.trim()?" · "+name.value.trim():"")});heroBox.append(name);
+   const name=document.createElement("input");name.style.cssText="position:relative;z-index:3;pointer-events:auto;touch-action:manipulation";name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";name.addEventListener("input",()=>{heroTitle.textContent="Held "+(hi+1)+(name.value.trim()?" · "+name.value.trim():"")});heroBox.append(name);
    const grid=document.createElement("div");grid.className="formgrid";grid.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px";
    NOX_GEAR_PARTS.forEach(part=>{
     const wrap=document.createElement("div");wrap.style.cssText="min-width:0;display:block";
     const label=document.createElement("label");label.textContent=part+" – Sterne";wrap.append(label);
-    const stars=document.createElement("select");stars.setAttribute("aria-label",part+" Sterne");stars.dataset.gearStars=part;
+    const stars=document.createElement("select");stars.style.cssText="position:relative;z-index:3;pointer-events:auto;touch-action:manipulation";stars.setAttribute("aria-label",part+" Sterne");stars.dataset.gearStars=part;
     const empty=document.createElement("option");empty.value="";empty.textContent="Sterne auswählen";stars.append(empty);
     for(let n=1;n<=5;n++){const o=document.createElement("option");o.value=String(n);o.textContent=n+" ★";stars.append(o)}
     stars.value=hero?.gear?.[part]?.stars??"";wrap.append(stars);
     const levelLabel=document.createElement("label");levelLabel.textContent=part+" – Level";wrap.append(levelLabel);
-    const level=document.createElement("input");level.type="number";level.min="0";level.max="999";level.step="1";level.placeholder="Level";level.setAttribute("aria-label",part+" Level");level.dataset.gearLevel=part;level.value=hero?.gear?.[part]?.level??"";wrap.append(level);grid.append(wrap);
+    const level=document.createElement("input");level.style.cssText="position:relative;z-index:3;pointer-events:auto;touch-action:manipulation";level.type="number";level.min="0";level.max="999";level.step="1";level.placeholder="Level";level.setAttribute("aria-label",part+" Level");level.dataset.gearLevel=part;level.value=hero?.gear?.[part]?.level??"";wrap.append(level);grid.append(wrap);
    });
    heroBox.append(grid);squadBox.append(heroBox);
   });
