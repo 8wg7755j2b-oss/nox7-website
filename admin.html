@@ -87,7 +87,7 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 </section>
 <section class="card" id="adminPowerPage"><div class="eyebrow">LAST WAR · POWER LEADERBOARD</div><h2>Spielstärke & Squad-Kampfkraft</h2><p class="muted">Rangliste nach Gesamtkampfkraft mit den drei einzelnen Squad-Werten.</p><div class="actions" style="margin:12px 0"><button class="btn secondary" id="refreshAdminRanking" type="button">Rangliste aktualisieren</button><span class="muted" id="adminRankingUpdated" aria-live="polite"></span></div>
 <h3>Spielstärke</h3>
-<div class="tablewrap"><table><thead><tr><th>Platz</th><th>Spieler</th><th>Allianzrang</th><th>Gesamtkampfkraft</th><th>Squad 1</th><th>Squad 2</th><th>Squad 3</th></tr></thead><tbody id="adminPowerRankingRows"><tr><td colspan="7">Rangliste wird geladen …</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Platz</th><th>Spieler</th><th>Allianzrang</th><th>Gesamtkampfkraft</th><th>Squad 1 · Typ / KP</th><th>Squad 2 · Typ / KP</th><th>Squad 3 · Typ / KP</th></tr></thead><tbody id="adminPowerRankingRows"><tr><td colspan="7">Rangliste wird geladen …</td></tr></tbody></table></div>
 </section>
 <section class="card" id="adminRanking">
 <div class="eyebrow">LEADERBOARD</div>
@@ -212,7 +212,7 @@ async function loadAdminRanking(){
   powerBody.replaceChildren();weekBody.replaceChildren();
   el("adminRankingStatus").textContent="Rangliste wird aktualisiert …";
   const {data:profiles,error:profileError}=await db.from("profiles")
-    .select("id,display_name,game_rank,power,squad1_power,squad2_power,squad3_power")
+    .select("id,display_name,game_rank,power,squad1_power,squad2_power,squad3_power,squad1_type,squad2_type,squad3_type")
     .eq("status","active")
     .order("power",{ascending:false,nullsFirst:false})
     .limit(200);
@@ -232,7 +232,7 @@ async function loadAdminRanking(){
       td.colSpan=7;td.textContent="Noch keine Ranglistendaten vorhanden.";tr.append(td);powerBody.append(tr);
     }else rows.forEach((p,i)=>{
       const tr=document.createElement("tr");
-      [String(i+1).padStart(2,"0"),p.display_name||"NOX7-Mitglied",rankLabels[p.game_rank]||p.game_rank||"Rekrut",p.power==null?"—":Number(p.power).toLocaleString("de-AT"),p.squad1_power==null?"—":Number(p.squad1_power).toLocaleString("de-AT"),p.squad2_power==null?"—":Number(p.squad2_power).toLocaleString("de-AT"),p.squad3_power==null?"—":Number(p.squad3_power).toLocaleString("de-AT")]
+      [String(i+1).padStart(2,"0"),p.display_name||"NOX7-Mitglied",rankLabels[p.game_rank]||p.game_rank||"Rekrut",p.power==null?"—":Number(p.power).toLocaleString("de-AT"),(p.squad1_type||"Typ offen")+" · "+(p.squad1_power==null?"—":Number(p.squad1_power).toLocaleString("de-AT")),(p.squad2_type||"Typ offen")+" · "+(p.squad2_power==null?"—":Number(p.squad2_power).toLocaleString("de-AT")),(p.squad3_type||"Typ offen")+" · "+(p.squad3_power==null?"—":Number(p.squad3_power).toLocaleString("de-AT"))]
         .forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td);});
       powerBody.append(tr);
     });
