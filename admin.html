@@ -40,7 +40,7 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
   .admin-shortcuts{position:fixed!important;top:12px!important;left:12px!important;right:auto!important;width:min(220px,calc(100vw - 24px))!important;max-height:calc(100vh - 24px)!important;margin:0!important}
   .nav-links{flex-direction:column!important;flex-wrap:nowrap!important}
   .admin-shortcuts a{display:flex!important;width:100%;white-space:normal!important}
-}</style>
+}body[data-admin-page="power"] #memberOverview,body[data-admin-page="power"] #adminRanking,body[data-admin-page="power"] #adminOnlyNews,body[data-admin-page="power"] #adminOnlyRankLabels,body[data-admin-page="power"] #adminOnlyProfile,body[data-admin-page="power"] #memberManagement{display:none!important}body:not([data-admin-page="power"]) #adminPowerPage{display:none!important}body[data-admin-page="power"] .admin-shortcuts a[href$="page=power"]{background:linear-gradient(100deg,#17384a,#14263a);border-color:#326078;color:#f5fbff;box-shadow:inset 0 0 0 1px #ffffff05}body[data-admin-page="power"] .admin-shortcuts a[href$="page=power"]:before{background:var(--cyan)}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -72,6 +72,7 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 <a href="admin.html?page=ranks" id="shortcutRanks" class="hidden">Rangbezeichnungen</a>
 <a href="admin.html?page=profile" id="shortcutProfile" class="hidden">ADMIN-Profil</a>
 <a href="admin.html?page=ranking" id="shortcutRanking">Rangliste</a>
+<a href="admin.html?page=power" id="shortcutPower">Spielstärke</a>
 <a href="admin.html?page=members">Mitglieder</a>
 <a href="admin.html?page=stats" id="shortcutStats">VS & Spenden</a>
 </div>
@@ -84,13 +85,14 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 <div class="card stat"><div class="eyebrow">R1</div><strong id="countR1">—</strong></div>
 <div class="card stat"><div class="eyebrow">ARCHIVIERT</div><strong id="countArchived">—</strong></div>
 </section>
+<section class="card" id="adminPowerPage"><div class="eyebrow">LAST WAR · POWER LEADERBOARD</div><h2>Spielstärke & Squad-Kampfkraft</h2><p class="muted">Rangliste nach Gesamtkampfkraft mit den drei einzelnen Squad-Werten.</p><div class="actions" style="margin:12px 0"><button class="btn secondary" id="refreshAdminRanking" type="button">Rangliste aktualisieren</button><span class="muted" id="adminRankingUpdated" aria-live="polite"></span></div>
+<h3>Spielstärke</h3>
+<div class="tablewrap"><table><thead><tr><th>Platz</th><th>Spieler</th><th>Allianzrang</th><th>Gesamtkampfkraft</th><th>Squad 1</th><th>Squad 2</th><th>Squad 3</th></tr></thead><tbody id="adminPowerRankingRows"><tr><td colspan="7">Rangliste wird geladen …</td></tr></tbody></table></div>
+</section>
 <section class="card" id="adminRanking">
 <div class="eyebrow">LEADERBOARD</div>
 <h2>Rangliste & Wochenstatistik</h2>
 <p class="muted">Dieselbe Spielstärke-Rangliste wie auf der öffentlichen Website. Darunter die freigegebenen VS- und Tech-Spendenpunkte der aktuellen Serverwoche (Montag bis Samstag, UTC).</p>
-<div class="actions" style="margin:12px 0"><button class="btn secondary" id="refreshAdminRanking" type="button">Rangliste aktualisieren</button><span class="muted" id="adminRankingUpdated" aria-live="polite"></span></div>
-<h3>Spielstärke</h3>
-<div class="tablewrap"><table><thead><tr><th>Platz</th><th>Spieler</th><th>Allianzrang</th><th>Gesamtkampfkraft</th><th>Squad 1</th><th>Squad 2</th><th>Squad 3</th></tr></thead><tbody id="adminPowerRankingRows"><tr><td colspan="7">Rangliste wird geladen …</td></tr></tbody></table></div>
 <h3 style="margin-top:24px">VS & Tech-Spenden · Diese Woche</h3>
 <div class="tablewrap"><table><thead><tr><th>Platz</th><th>Mitglied</th><th>VS-Punkte</th><th>Tech-Spendenpunkte</th></tr></thead><tbody id="adminWeeklyRankingRows"><tr><td colspan="4">Wochenwerte werden geladen …</td></tr></tbody></table></div>
 <div id="adminRankingStatus" class="muted" role="status" aria-live="polite"></div>
@@ -523,7 +525,7 @@ if(adminNav&&adminNavToggle){
     adminNavToggle.setAttribute("aria-expanded",String(isOpen));
   });
 }
-const adminPageNames={overview:"Übersicht",ranking:"Rangliste",members:"Mitgliederverwaltung",stats:"VS & Spenden",news:"News & Events",ranks:"Rangbezeichnungen",profile:"ADMIN-Profil"};
+const adminPageNames={overview:"Übersicht",ranking:"Rangliste",power:"Spielstärke",members:"Mitgliederverwaltung",stats:"VS & Spenden",news:"News & Events",ranks:"Rangbezeichnungen",profile:"ADMIN-Profil"};
 const requestedAdminPage=new URLSearchParams(window.location.search).get("page")||"overview";
 document.body.dataset.adminPage=Object.prototype.hasOwnProperty.call(adminPageNames,requestedAdminPage)?requestedAdminPage:"overview";
 const adminPageHeading=document.querySelector("main h1");
