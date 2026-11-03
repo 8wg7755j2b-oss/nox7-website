@@ -452,7 +452,7 @@ async function loadMembers(preserveStatus=false){
             if(archiveError){message("memberStatus","Name, Spielstärke und Rang wurden gespeichert, aber Archivieren ist fehlgeschlagen: "+archiveError.message,true);return;}
             message("memberStatus","ERFOLG: "+newName+" wurde gespeichert und als "+({left:"Ausgetreten",kicked:"Entfernt",transferred:"Gewechselt"}[archiveReason])+" archiviert.");
           }else{
-            message("memberStatus","ERFOLG: "+newName+" – Name, Spielstärke "+newPower.toLocaleString("de-AT")+" und Rang "+newRank+" wurden gespeichert und geprüft.");
+            message("memberStatus","ERFOLG: "+newName+" – Name, Spielstärke "+Number(p.power||0).toLocaleString("de-AT")+" und Rang "+newRank+" wurden gespeichert und geprüft.");
           }
           await loadMembers(true);
         }catch(err){message("memberStatus","Unerwarteter Speicherfehler: "+(err.message||String(err)),true);}
