@@ -8,12 +8,13 @@
 :root{--bg:#080d18;--panel:#111c2e;--panel2:#0d1626;--line:#293b56;--cyan:#62e7ff;--gold:#e9c16f;--muted:#9cacc3;--white:#f3f7ff}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 80% -15%,#1c345a 0,transparent 40%),var(--bg);color:var(--white);font:16px/1.6 system-ui,Segoe UI,Arial,sans-serif}a{color:var(--cyan);text-decoration:none}a:hover{color:white}.wrap{max-width:1050px;margin:auto;padding:0 22px}header{position:sticky;top:0;z-index:5;background:#080d18ed;backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.nav{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.logo{font-weight:1000;letter-spacing:.16em;font-size:25px;color:white}.logo span{color:var(--cyan)}nav{display:flex;gap:20px;flex-wrap:wrap;font-size:14px}nav a{color:#c5d0e2}.hero{padding:72px 0 45px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:850;letter-spacing:.2em}.hero h1{font-size:clamp(38px,7vw,66px);line-height:1.02;letter-spacing:-.05em;margin:12px 0}.hero h1 em{font-style:normal;color:var(--cyan)}.lead{max-width:720px;color:#b4c2d6;font-size:18px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:linear-gradient(145deg,#142239,#0d1626);border:1px solid var(--line);border-radius:13px;padding:20px;margin-bottom:14px}.card h2{margin:0 0 10px;font-size:24px}.card h3{color:var(--gold);margin:0 0 7px}.card p{margin:7px 0;color:#c1ccdc}.number{color:var(--cyan);font-weight:900;margin-right:8px}.pill{display:inline-block;border:1px solid #3d7189;border-radius:30px;padding:3px 10px;font-size:12px;color:#a8efff;margin:3px 5px 3px 0}.muted{color:var(--muted)}.notice{border-left:3px solid var(--gold);padding:12px 15px;background:#171e2b;border-radius:5px;color:#d5deeb;margin:16px 0}ul{padding-left:21px;color:#c1ccdc}li{margin:6px 0}.back{display:inline-block;margin:12px 0 30px;padding:9px 14px;border:1px solid #3b6d8b;border-radius:8px;background:#12283a}footer{border-top:1px solid var(--line);padding:25px 0;color:var(--muted);font-size:13px;margin-top:30px}
 @media(max-width:650px){.wrap{padding:0 16px}.nav{padding:12px 0}nav{gap:12px}.grid{grid-template-columns:1fr}.hero{padding-top:48px}}
-</style>
+ .converter{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.converter label{display:block;color:var(--muted);font-size:13px}.converter input{width:100%;background:#080f1c;border:1px solid #344862;border-radius:8px;color:white;padding:11px;margin-top:6px}.convertbtn{background:linear-gradient(120deg,#15506a,#2a477d);border:1px solid #3b6d8b;border-radius:8px;padding:11px 16px;color:white;font-weight:750;cursor:pointer}.convertresult{margin-top:13px;color:var(--cyan);font-weight:750;min-height:26px}@media(max-width:560px){.converter{grid-template-columns:1fr}.convertbtn{width:100%}}</style>
 </head>
 <body>
 <header><div class="wrap nav"><a class="logo" href="index.html">NOX<span>7</span></a><nav><a href="index.html">Startseite</a><a href="index.html#team">Mitglieder</a><a href="index.html#news">News & Events</a><a href="index.html#ranking">Rangliste</a><a href="index.html#rules">Regeln</a></nav></div></header>
 <main class="wrap">
 <div class="hero"><div class="eyebrow">LAST WAR · SERVER 1653</div><h1>ALLIANZ-<em>INFORMATIONEN</em></h1><p class="lead">Willkommen bei NOX7. Hier findest du die wichtigsten Informationen zu unserer Gemeinschaft, unseren Regeln und dem gemeinsamen Spiel.</p><span class="pill">NOX7 · United in the Shadows</span><span class="pill">Serverzeit: UTC−2</span><span class="pill">Mehr als ein Team – eine Familie</span></div>
+<section class="card" aria-labelledby="timeConvertTitle"><div class="eyebrow">ZEITUMRECHNER</div><h2 id="timeConvertTitle">Serverzeit → deine Ortszeit</h2><p>Gib Datum und Uhrzeit des Events in Serverzeit (UTC−2) ein. Der Rechner berücksichtigt automatisch die Sommer- und Winterzeit deines Geräts.</p><div class="converter"><div><label for="serverEventTime">Eventdatum und Serverzeit (UTC−2)</label><input id="serverEventTime" type="datetime-local"></div><button class="convertbtn" type="button" id="convertTimeBtn">In Ortszeit umrechnen</button></div><div id="localTimeResult" class="convertresult" aria-live="polite">Deine umgerechnete Ortszeit erscheint hier.</div><small class="muted" id="localZoneLabel"></small></section>
 <div class="grid">
 <article class="card"><h2><span class="number">01</span>Wer wir sind</h2><p>NOX7 steht für Zusammenhalt, Verlässlichkeit und gemeinsames Wachstum. Wir unterstützen einander, kommunizieren offen und treten als Team auf.</p><p>Jeder Kommandant trägt zum Erfolg der Allianz bei – im Alltag ebenso wie bei wichtigen Server- und Allianz-Events.</p></article>
 <article class="card"><h2><span class="number">02</span>Führung & Kommunikation</h2><h3>R5 – Allianzführung</h3><p>Trägt die Gesamtverantwortung und trifft die übergeordneten Entscheidungen.</p><h3>R4 – Führungsteam</h3><p>Unterstützt R5, koordiniert Mitglieder und Events und ist Ansprechpartner bei Fragen oder Problemen.</p><p class="muted">Bitte Nachrichten der Führung lesen und bei Rückfragen zeitnah antworten.</p></article>
@@ -26,5 +27,23 @@
 <a class="back" href="index.html">← Zurück zur NOX7-Startseite</a>
 </main>
 <footer><div class="wrap">NOX7 · Server 1653 · United in the Shadows</div></footer>
-</body>
+<script>
+(function(){
+ const input=document.getElementById('serverEventTime');
+ const button=document.getElementById('convertTimeBtn');
+ const result=document.getElementById('localTimeResult');
+ const zone=document.getElementById('localZoneLabel');
+ const localZone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'lokale Zeitzone';
+ zone.textContent='Ziel-Zeitzone dieses Geräts: '+localZone;
+ button.addEventListener('click',function(){
+   if(!input.value){result.textContent='Bitte zuerst Datum und Serverzeit eingeben.';return;}
+   const parts=input.value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+   if(!parts){result.textContent='Bitte ein gültiges Datum und eine Uhrzeit auswählen.';return;}
+   const [,y,mo,d,h,mi]=parts.map((v,i)=>i===0?v:Number(v));
+   const instant=new Date(Date.UTC(Number(y),Number(mo)-1,Number(d),Number(h)+2,Number(mi)));
+   const formatted=new Intl.DateTimeFormat('de-AT',{dateStyle:'full',timeStyle:'short',timeZone:localZone}).format(instant);
+   result.textContent='Deine Ortszeit: '+formatted;
+ });
+})();
+</script></body>
 </html>
