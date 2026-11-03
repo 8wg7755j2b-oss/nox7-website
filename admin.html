@@ -88,7 +88,7 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 <section class="card hidden" id="powerDevelopmentPanel">
 <div class="eyebrow">POWER TRACKING · DEVELOPMENT</div><h2>Entwicklungskurve</h2>
 <p class="muted">Verlauf der Gesamtkampfkraft eines Mitglieds. Neue Messpunkte werden automatisch gespeichert, sobald sich die Gesamtkampfkraft im Profil ändert.</p>
-<div class="formgrid"><div><label for="powerHistoryMember">Mitglied auswählen</label><select id="powerHistoryMember"><option value="">Mitglied auswählen …</option></select></div><div class="actions" style="align-items:end"><button type="button" class="btn secondary" id="refreshPowerHistory">Kurve aktualisieren</button></div></div>
+<div class="formgrid"><div><label for="powerHistoryMember">Mitglied auswählen</label><select id="powerHistoryMember"><option value="">Mitglied auswählen …</option></select></div><div><label for="powerHistoryMetric">Entwicklung anzeigen</label><select id="powerHistoryMetric"><option value="total">Gesamtkampfkraft</option><option value="1">Squad 1</option><option value="2">Squad 2</option><option value="3">Squad 3</option></select></div><div class="actions" style="align-items:end"><button type="button" class="btn secondary" id="refreshPowerHistory">Kurve aktualisieren</button></div></div>
 <div id="powerHistorySummary" class="notice" aria-live="polite">Bitte ein Mitglied auswählen.</div>
 <div id="powerHistoryChart" style="width:100%;min-height:240px;overflow:hidden"></div>
 <div class="tablewrap"><table><thead><tr><th>Datum</th><th>Gesamtkampfkraft</th></tr></thead><tbody id="powerHistoryRows"><tr><td colspan="2">Noch keine Daten geladen.</td></tr></tbody></table></div>
