@@ -26,7 +26,7 @@ create policy nox7_profiles_update_own_guard
 
 -- Remove broad table-level UPDATE rights and allow only self-editable fields.
 -- Rank, role, status, membership state and leadership controls are excluded.
-revoke update on table public.profiles from authenticated;
+revoke update on table public.profiles from public, anon, authenticated;
 grant update (
   display_name,
   power,
