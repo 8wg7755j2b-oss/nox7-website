@@ -74,3 +74,14 @@ HILFE
 Supabase: https://supabase.com/docs
 Vercel: https://vercel.com/docs
 GitHub: https://docs.github.com
+
+
+SCHRITT 8 – Vollständiges Löschen eines Mitgliedskontos
+1. Die Funktion liegt unter supabase/functions/delete-nox7-member/index.ts.
+2. Supabase CLI installieren und im Projektordner mit dem verknüpften Supabase-Projekt ausführen:
+   supabase functions deploy delete-nox7-member
+3. JWT-Prüfung NICHT deaktivieren. Die Funktion prüft zusätzlich das angemeldete Konto und dessen R4/R5- oder ADMIN-Rechte serverseitig.
+4. In der Admin-Mitgliederverwaltung kann ein berechtigter R4/R5/ADMIN ein Mitglied über „Endgültig löschen“ entfernen. Die Bestätigung verlangt zusätzlich die Eingabe „ENDGÜLTIG LÖSCHEN“.
+5. Das eigene Konto, das geschützte ADMIN-Konto sowie R5-Konten sind gegen Löschung geschützt.
+
+WICHTIG: Das Löschen über Supabase Auth entfernt das Auth-Konto und das Profil, sofern die profile.id-Fremdschlüsselbeziehung wie vorgesehen ON DELETE CASCADE verwendet. Weitere Tabellen werden nur automatisch mitgelöscht, wenn deren Fremdschlüssel ebenfalls ON DELETE CASCADE besitzen. Storage-Dateien werden dadurch nicht automatisch entfernt. Vor dem produktiven Einsatz die Fremdschlüssel und vorhandene Storage-Buckets prüfen und ein Datenbank-Backup erstellen.
