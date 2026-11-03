@@ -398,7 +398,7 @@ el("manualStatsForm").addEventListener("submit",async event=>{
 });
 const NOX_GEAR_PARTS=["Waffe","Rüstung","Chip","Radar"];
 function emptyHeroRoster(){return Array.from({length:3},()=>Array.from({length:5},()=>({name:"",gear:{Waffe:{stars:"",level:""},Rüstung:{stars:"",level:""},Chip:{stars:"",level:""},Radar:{stars:"",level:""}}})))}
-function renderHeroRoster(valuetrue) {
+function renderHeroRoster(value,rootId="heroSquadAccordions") {
  const root=document.getElementById(rootId);if(!root)return;
  const roster=Array.isArray(value)&&value.length===3?value:emptyHeroRoster();root.replaceChildren();
  roster.forEach((squad,si)=>{
