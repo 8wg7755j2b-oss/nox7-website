@@ -134,15 +134,15 @@ function renderHeroRoster(value){
  roster.forEach((squad,si)=>{
   const squadBox=document.createElement("div");squadBox.className="hero-squad";squadBox.style.cssText="border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:10px;background:#0d1626";
   const squadButton=document.createElement("button");squadButton.type="button";squadButton.className="btn secondary";squadButton.style.cssText="display:block;width:100%;text-align:left;margin:0";squadButton.textContent="＋ Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";
-  const squadContent=document.createElement("div");squadContent.hidden=true;squadContent.className="hero-squad-content";squadButton.addEventListener("click",()=>{squadContent.hidden=!squadContent.hidden;squadButton.textContent=(squadContent.hidden?"＋ ":"− ")+"Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";});
+  const squadContent=document.createElement("div");squadContent.className="hero-squad-content";squadContent.style.display="none";squadButton.addEventListener("click",()=>{const isClosed=squadContent.style.display==="none";squadContent.style.display=isClosed?"block":"none";squadButton.textContent=(isClosed?"− ":"＋ ")+"Squad "+(si+1)+" · "+squad.filter(h=>h&&h.name).length+"/5 Helden";});
   squadBox.append(squadButton,squadContent);
   (squad||[]).forEach((hero,hi)=>{
    const heroBox=document.createElement("div");heroBox.style.cssText="border:1px solid var(--line);border-radius:8px;margin:9px 0;padding:10px;background:#111c2e";
    const heroButton=document.createElement("button");heroButton.type="button";heroButton.className="btn secondary";heroButton.style.cssText="display:block;width:100%;text-align:left";heroButton.textContent="＋ Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");
-   const heroContent=document.createElement("div");heroContent.hidden=true;heroContent.style.cssText="padding-top:10px";
-   heroButton.addEventListener("click",()=>{heroContent.hidden=!heroContent.hidden;heroButton.textContent=(heroContent.hidden?"＋ ":"− ")+"Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");});
+   const heroContent=document.createElement("div");heroContent.style.cssText="padding-top:10px;display:none";
+   heroButton.addEventListener("click",()=>{const isClosed=heroContent.style.display==="none";heroContent.style.display=isClosed?"block":"none";heroButton.textContent=(isClosed?"− ":"＋ ")+"Held "+(hi+1)+(hero?.name?" · "+hero.name:" · nicht eingetragen");});
    const nameLabel=document.createElement("label");nameLabel.textContent="Heldenname";heroContent.append(nameLabel);
-   const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";name.addEventListener("input",()=>{heroButton.textContent=(heroContent.hidden?"＋ ":"− ")+"Held "+(hi+1)+(name.value.trim()?" · "+name.value.trim():" · nicht eingetragen")});heroContent.append(name);
+   const name=document.createElement("input");name.type="text";name.maxLength=60;name.placeholder="Name des Helden";name.value=hero?.name||"";name.dataset.heroName="";name.addEventListener("input",()=>{heroButton.textContent=(heroContent.style.display==="none"?"＋ ":"− ")+"Held "+(hi+1)+(name.value.trim()?" · "+name.value.trim():" · nicht eingetragen")});heroContent.append(name);
    const grid=document.createElement("div");grid.className="formgrid";
    NOX_GEAR_PARTS.forEach(part=>{
     const wrap=document.createElement("div");const label=document.createElement("label");label.textContent=part+" – Sterne";wrap.append(label);
