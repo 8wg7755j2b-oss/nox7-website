@@ -13,6 +13,8 @@ create index if not exists nox7_squad_power_history_lookup_idx
   on public.nox7_squad_power_history(user_id, squad_number, recorded_at);
 
 alter table public.nox7_squad_power_history enable row level security;
+revoke all on table public.nox7_squad_power_history from anon, authenticated;
+grant select on table public.nox7_squad_power_history to authenticated;
 
 drop policy if exists "NOX7 squad power history readable by owner and leadership"
   on public.nox7_squad_power_history;
@@ -38,7 +40,7 @@ create or replace function public.nox7_record_squad_power_history()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   n smallint;
@@ -91,3 +93,5 @@ where v.power is not null
     where h.user_id = p.id
       and h.squad_number = v.squad_number
   );
+
+revoke all on function public.nox7_record_squad_power_history() from public, anon, authenticated;
