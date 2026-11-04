@@ -25,7 +25,7 @@ for(let si=0;si<3;si++){
     shownHeroes++;
     const heroBox=el('div','');
     heroBox.style.cssText='margin-top:10px;padding-top:9px;border-top:1px solid var(--line)';
-    heroBox.append(el('strong','',hero.name));
+    heroBox.append(el('strong','',hero.name+' · Level '+(hero.level??'–')+' · '+(hero.stars??'–')+' Sterne'));
     const gear=el('div','small');
     gear.style.marginTop='4px';
     const lines=gearParts.map(part=>{
@@ -43,7 +43,103 @@ for(let si=0;si<3;si++){
 if(!shownHeroes)heroSection.append(el('p','small','Für dieses Mitglied sind derzeit keine Helden hinterlegt.'));
 root.append(heroSection);
 if(selected.can_manage_alliance){const edit=el('button','','Mitglied bearbeiten');edit.style.marginTop='12px';edit.onclick=()=>renderMemberEditor(root,data);root.append(edit)}const close=el('button','secondary member-open','Details schließen');close.style.margin='12px 0 0 8px';close.onclick=()=>{root.hidden=true;root.replaceChildren()};root.append(close)}
-function renderMemberEditor(root,p){root.replaceChildren();root.hidden=false;root.append(el('h3','','Mitglied bearbeiten: '+p.display_name));const form=el('div','member-detail-grid');function field(label,value,type='text'){const wrap=el('label','member-detail-item');wrap.append(el('span','',label));const input=el('input');input.type=type;input.value=value==null?'':String(value);input.style.cssText='width:100%;margin-top:5px;padding:9px;border-radius:7px;border:1px solid #52647d;background:#0b1727;color:#eef4fc';wrap.append(input);form.append(wrap);return input}const name=field('Spielername',p.display_name);const power=field('Gesamtkampfkraft',p.power,'number');const squad=[];for(let i=1;i<=3;i++){const sq=field('Squad '+i+' Kampfkraft',p['squad'+i+'_power'],'number');const typ=field('Squad '+i+' Typ',p['squad'+i+'_type']||'');squad.push({power:sq,type:typ})}root.append(form);const save=el('button','','Änderungen speichern');save.style.marginTop='12px';save.onclick=async()=>{save.disabled=true;save.textContent='Speichert …';const val=x=>x.value.trim()===''?null:Number(x.value);const args={p_actor_profile_id:selected.profile_id,p_target_profile_id:p.profile_id,p_display_name:name.value.trim(),p_power:val(power),p_squad1_power:val(squad[0].power),p_squad1_type:squad[0].type.value.trim()||null,p_squad2_power:val(squad[1].power),p_squad2_type:squad[1].type.value.trim()||null,p_squad3_power:val(squad[2].power),p_squad3_type:squad[2].type.value.trim()||null,p_squad_heroes:p.squad_heroes??[]};if(args.p_power!==null&&(!Number.isSafeInteger(args.p_power)||args.p_power<0)||squad.some(s=>{const n=val(s.power);return n!==null&&(!Number.isSafeInteger(n)||n<0)})){msg('Bitte nur gültige, nicht negative ganze Kampfkraftwerte eingeben.',true);save.disabled=false;save.textContent='Änderungen speichern';return}const result=await db.rpc('alliance_update_member_profile_data',args);if(result.error){msg('Speichern fehlgeschlagen: '+result.error.message,true);save.disabled=false;save.textContent='Änderungen speichern';return}msg('Mitgliedsprofil erfolgreich aktualisiert.');await loadMembers();const refreshed=await db.rpc('alliance_get_member_profile_data',{p_actor_profile_id:selected.profile_id,p_target_profile_id:p.profile_id});if(refreshed.data?.length)await showMemberDetails({...p,...refreshed.data[0]})};root.append(save);const cancel=el('button','secondary','Abbrechen');cancel.style.margin='12px 0 0 8px';cancel.onclick=()=>showMemberDetails(p);root.append(cancel)}
+function renderMemberEditor(root,p){
+root.replaceChildren();root.hidden=false;
+root.append(el('h3','','Mitglied bearbeiten: '+p.display_name));
+const form=el('div','member-detail-grid');
+function field(parent,label,value,type='text'){
+ const wrap=el('label','member-detail-item');wrap.append(el('span','',label));
+ const input=el('input');input.type=type;input.value=value==null?'':String(value);
+ input.style.cssText='width:100%;margin-top:5px;padding:9px;border-radius:7px;border:1px solid #52647d;background:#0b1727;color:#eef4fc';
+ wrap.append(input);parent.append(wrap);return input;
+}
+const name=field(form,'Spielername',p.display_name);
+const power=field(form,'Gesamtkampfkraft',p.power,'number');
+const squad=[];
+for(let i=1;i<=3;i++){
+ const sq=field(form,'Squad '+i+' Kampfkraft',p['squad'+i+'_power'],'number');
+ const typ=field(form,'Squad '+i+' Typ',p['squad'+i+'_type']||'');
+ squad.push({power:sq,type:typ});
+}
+root.append(form);
+root.append(el('h3','','Helden & Ausrüstung bearbeiten'));
+root.append(el('p','small','Bis zu fünf Helden je Squad. Leere Heldenslots werden nicht gespeichert. Bestehende Zusatzdaten der Helden bleiben erhalten.'));
+const original=Array.isArray(p.squad_heroes)?p.squad_heroes:[[],[],[]];
+const heroInputs=[];
+const gearParts=['Waffe','Rüstung','Chip','Radar'];
+for(let si=0;si<3;si++){
+ const squadBox=el('section','member-detail-item');squadBox.style.marginTop='12px';
+ squadBox.append(el('h4','','Squad '+(si+1)));
+ const slots=[];
+ const existing=Array.isArray(original[si])?original[si]:[];
+ for(let hi=0;hi<5;hi++){
+  const source=existing[hi]&&typeof existing[hi]==='object'?existing[hi]:{};
+  const card=el('div','member-detail-item');card.style.marginTop='9px';
+  card.append(el('strong','','Held '+(hi+1)));
+  const heroName=field(card,'Heldenname',source.name||'');
+  const heroLevel=field(card,'Heldenlevel',source.level??'','number');
+  const heroStars=field(card,'Heldensterne',source.stars??'','number');
+  const gearInputs={};
+  gearParts.forEach(part=>{
+   const gear=source.gear&&source.gear[part]&&typeof source.gear[part]==='object'?source.gear[part]:{};
+   const heading=el('div','small','Ausrüstung: '+part);heading.style.marginTop='8px';card.append(heading);
+   gearInputs[part]={
+    level:field(card,part+' Level',gear.level??'','number'),
+    stars:field(card,part+' Sterne',gear.stars??'','number')
+   };
+  });
+  slots.push({source,heroName,heroLevel,heroStars,gearInputs});
+  squadBox.append(card);
+ }
+ heroInputs.push(slots);root.append(squadBox);
+}
+const save=el('button','','Änderungen speichern');save.style.marginTop='12px';
+save.onclick=async()=>{
+ save.disabled=true;save.textContent='Speichert …';
+ const val=x=>x.value.trim()===''?null:Number(x.value);
+ const validNumber=x=>{const n=val(x);return n===null||(Number.isSafeInteger(n)&&n>=0)};
+ const allNumeric=[power,...squad.map(s=>s.power),...heroInputs.flat().flatMap(h=>[h.heroLevel,h.heroStars,...gearParts.flatMap(g=>[h.gearInputs[g].level,h.gearInputs[g].stars])])];
+ if(!validNumber(power)||squad.some(s=>!validNumber(s.power))||allNumeric.some(x=>!validNumber(x))){
+  msg('Bitte nur gültige, nicht negative ganze Zahlen bei Power, Level und Sternen eingeben.',true);
+  save.disabled=false;save.textContent='Änderungen speichern';return;
+ }
+ const updatedHeroes=heroInputs.map(slots=>slots.map(slot=>{
+  const heroName=slot.heroName.value.trim();
+  if(!heroName)return null;
+  const hero={...slot.source,name:heroName};
+  const level=val(slot.heroLevel),stars=val(slot.heroStars);
+  if(level===null)delete hero.level;else hero.level=level;
+  if(stars===null)delete hero.stars;else hero.stars=stars;
+  const gear={...(hero.gear||{})};
+  gearParts.forEach(part=>{
+   const oldGear=gear[part]&&typeof gear[part]==='object'?gear[part]:{};
+   const gearLevel=val(slot.gearInputs[part].level),gearStars=val(slot.gearInputs[part].stars);
+   const next={...oldGear};
+   if(gearLevel===null)delete next.level;else next.level=gearLevel;
+   if(gearStars===null)delete next.stars;else next.stars=gearStars;
+   if(Object.keys(next).length)gear[part]=next;else delete gear[part];
+  });
+  hero.gear=gear;
+  return hero;
+ }).filter(Boolean));
+ const args={
+  p_actor_profile_id:selected.profile_id,p_target_profile_id:p.profile_id,
+  p_display_name:name.value.trim(),p_power:val(power),
+  p_squad1_power:val(squad[0].power),p_squad1_type:squad[0].type.value.trim()||null,
+  p_squad2_power:val(squad[1].power),p_squad2_type:squad[1].type.value.trim()||null,
+  p_squad3_power:val(squad[2].power),p_squad3_type:squad[2].type.value.trim()||null,
+  p_squad_heroes:updatedHeroes
+ };
+ const result=await db.rpc('alliance_update_member_profile_data',args);
+ if(result.error){msg('Speichern fehlgeschlagen: '+result.error.message,true);save.disabled=false;save.textContent='Änderungen speichern';return}
+ msg('Mitgliedsprofil inklusive Helden und Ausrüstung erfolgreich aktualisiert.');
+ await loadMembers();
+ const refreshed=await db.rpc('alliance_get_member_profile_data',{p_actor_profile_id:selected.profile_id,p_target_profile_id:p.profile_id});
+ if(refreshed.data?.length)await showMemberDetails({...p,...refreshed.data[0]});
+};
+root.append(save);
+const cancel=el('button','secondary','Abbrechen');cancel.style.margin='12px 0 0 8px';cancel.onclick=()=>showMemberDetails(p);root.append(cancel);
+}
 async function loadMembers(){const root=$('members');root.replaceChildren();const details=$('memberDetails');details.hidden=true;details.replaceChildren();const r=await db.rpc('alliance_list_members',{p_actor_profile_id:selected.profile_id});if(r.error){root.textContent='Mitgliederliste nicht verfügbar: '+r.error.message;return}if(!r.data?.length){root.textContent='Keine aktiven Mitglieder gefunden.';return}const total=el('div','small',r.data.length+' aktive Mitglieder');root.append(total);r.data.forEach(p=>{const row=el('div','listrow'),left=el('div');left.append(el('strong','',p.display_name),el('div','small',(p.game_rank||'R1')+' · '+(p.squad1_type||'Squad 1 nicht festgelegt')));const actions=el('div');actions.style.display='flex';actions.style.alignItems='center';actions.style.gap='8px';actions.append(el('strong','',num(p.power)));const b=el('button','secondary member-open','Profil ansehen');b.onclick=()=>showMemberDetails(p);actions.append(b);row.append(left,actions);root.append(row)})}
 async function loadRanking(){const root=$('powerRanking');root.replaceChildren();const r=await db.rpc('alliance_get_power_ranking',{p_actor_profile_id:selected.profile_id,p_limit:10});if(r.error){root.textContent='Ranking nicht verfügbar: '+r.error.message;return}if(!r.data?.length){root.textContent='Noch keine Rankingdaten vorhanden.';return}r.data.forEach((p,i)=>{const row=el('div','listrow');row.append(el('span','',(i+1)+'. '+p.display_name+' · '+(p.game_rank||'R1')),el('strong','',num(p.power)));root.append(row)})}
 async function loadPosts(){const root=$('posts');root.replaceChildren();const r=await db.rpc('alliance_list_posts',{p_actor_profile_id:selected.profile_id,p_limit:10});if(r.error){root.textContent='Beiträge nicht verfügbar: '+r.error.message;return}if(!r.data?.length){root.textContent='Noch keine Beiträge oder Termine vorhanden.';return}r.data.forEach(p=>{const row=el('div','listrow'),left=el('div');left.append(el('strong','',p.title),el('div','small',p.kind==='event'?'Termin':'Neuigkeit'));row.append(left,el('span','small',new Date(p.created_at).toLocaleDateString('de-AT')));root.append(row)})}
