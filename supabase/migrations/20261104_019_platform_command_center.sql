@@ -175,18 +175,21 @@ create or replace function public.platform_admin_set_profile(p_profile_id uuid,p
 returns void
 language plpgsql security definer set search_path=''
 as $function$
-declare v_alliance uuid; v_old_rank text; v_old_status text;
+declare v_alliance uuid; v_old_rank text; v_old_status text; v_owner uuid;
 begin
   perform public.platform_admin_guard();
   if p_rank not in ('R1','R2','R3','R4','R5') then raise exception 'Ungültiger Rang'; end if;
   if p_locked is null then raise exception 'Sperrstatus fehlt'; end if;
-  select alliance_id,game_rank,status into v_alliance,v_old_rank,v_old_status from public.profiles where id=p_profile_id for update;
+  select alliance_id,game_rank,status,owner_id into v_alliance,v_old_rank,v_old_status,v_owner from public.profiles where id=p_profile_id for update;
   if v_alliance is null then raise exception 'Profil nicht gefunden'; end if;
   if p_rank='R5' and p_status='active' then
     update public.profiles set game_rank='R1' where alliance_id=v_alliance and id<>p_profile_id and game_rank='R5' and status='active';
   end if;
   update public.profiles set game_rank=p_rank,platform_locked=p_locked
-  where id=p_profile_id;
+  where owner_id=v_owner;
+  -- Lock/unlock the entire login account, not just one alliance profile.
+  update auth.users set banned_until=case when p_locked then 'infinity'::timestamptz else null end
+  where id=v_owner;
   perform public.platform_admin_log('profile.update','profile',p_profile_id::text,jsonb_build_object('old_rank',v_old_rank,'rank',p_rank,'old_status',v_old_status,'platform_locked',p_locked));
 end;
 $function$;
