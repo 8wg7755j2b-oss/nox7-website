@@ -182,7 +182,7 @@ begin
   if p_locked is null then raise exception 'Sperrstatus fehlt'; end if;
   select alliance_id,game_rank,status,owner_id into v_alliance,v_old_rank,v_old_status,v_owner from public.profiles where id=p_profile_id for update;
   if v_alliance is null then raise exception 'Profil nicht gefunden'; end if;
-  if p_rank='R5' and p_status='active' then
+  if p_rank='R5' and v_old_status='active' then
     update public.profiles set game_rank='R1' where alliance_id=v_alliance and id<>p_profile_id and game_rank='R5' and status='active';
   end if;
   update public.profiles set game_rank=p_rank,platform_locked=p_locked
@@ -312,7 +312,7 @@ grant execute on function public.platform_admin_join_requests() to authenticated
 grant execute on function public.platform_admin_invites() to authenticated;
 grant execute on function public.platform_admin_create_alliance(text,text) to authenticated;
 grant execute on function public.platform_admin_update_alliance(uuid,text,text,boolean) to authenticated;
-grant execute on function public.platform_admin_set_profile(uuid,text,text) to authenticated;
+grant execute on function public.platform_admin_set_profile(uuid,text,boolean) to authenticated;
 grant execute on function public.platform_admin_transfer_profile(uuid,text) to authenticated;
 grant execute on function public.platform_admin_review_request(uuid,boolean,text) to authenticated;
 grant execute on function public.platform_admin_revoke_invite(uuid) to authenticated;
