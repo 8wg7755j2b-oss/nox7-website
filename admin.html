@@ -148,6 +148,13 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 <div class="card hidden" id="registrationAdminPanel" style="margin:16px 0;border-color:#b18b43">
   <div class="eyebrow">NOX7 · ACCESS CONTROL</div><h3>Registrierungen & Einladungscodes</h3>
   <p class="muted">Neue Konten benötigen einen gültigen Einladungscode, bestätigte E-Mail und deine persönliche Freigabe. Nur der Haupt-ADMIN kann Anträge genehmigen oder Codes verwalten.</p>
+  <div class="card" id="registrationTestPanel" style="margin:14px 0;border:1px dashed #62e7ff;background:#0b1928">
+    <div class="eyebrow">ADMIN-WERKZEUG · DEMOMODUS</div>
+    <h3>Registrierungsablauf testen</h3>
+    <p class="muted">Erzeugt einen rein lokalen Demo-Antrag. Es wird kein Supabase-Konto angelegt, kein Einladungscode verbraucht und kein echtes Mitglied verändert. Der Test zeigt nur den Ablauf der Admin-Freigabe.</p>
+    <div class="actions"><button class="btn secondary" id="createRegistrationDemo" type="button">Demo-Antrag erzeugen</button><span id="registrationDemoStatus" class="muted" aria-live="polite">Noch kein Test gestartet.</span></div>
+    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Testspieler</th><th>Status</th><th>Admin-Aktion</th></tr></thead><tbody id="registrationDemoRows"><tr><td colspan="3">Noch kein Demo-Antrag vorhanden.</td></tr></tbody></table></div>
+  </div>
   <div class="grid"><div><label for="inviteMaxUses">Maximale Verwendungen</label><input id="inviteMaxUses" type="number" min="1" max="500" value="1"></div><div><label for="inviteExpiryDays">Gültigkeit in Tagen (0 = unbegrenzt)</label><input id="inviteExpiryDays" type="number" min="0" max="365" value="7"></div></div>
   <button class="btn" id="createInviteCode" type="button">Einladungscode erstellen</button>
   <div id="inviteCodeResult" class="notice" aria-live="polite">Neue Codes werden nur einmal vollständig angezeigt. Bitte sicher weitergeben.</div>
@@ -543,6 +550,20 @@ async function loadPendingDailyStats(){
   });
 }
 let memberView="R5";
+let registrationDemoState=null;
+function renderRegistrationDemo(){
+ const body=el("registrationDemoRows");body.replaceChildren();
+ if(!registrationDemoState){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Noch kein Demo-Antrag vorhanden.";tr.append(td);body.append(tr);return;}
+ const tr=document.createElement("tr");
+ const name=document.createElement("td");name.textContent="NOX7-DEMO-001";tr.append(name);
+ const status=document.createElement("td");status.textContent=registrationDemoState==="pending"?"Ausstehend":registrationDemoState==="approved"?"Freigegeben – Demo-Zugriff aktiv":"Abgelehnt";tr.append(status);
+ const actions=document.createElement("td");
+ if(registrationDemoState==="pending"){
+  [["Freigabe simulieren","approved"],["Ablehnung simulieren","rejected"]].forEach(([label,next])=>{const b=document.createElement("button");b.type="button";b.className="btn secondary";b.textContent=label;b.style.margin="3px";b.addEventListener("click",()=>{registrationDemoState=next;renderRegistrationDemo();message("registrationDemoStatus",next==="approved"?"Demo erfolgreich freigegeben. Im echten Ablauf würde das Konto jetzt aktiv werden.":"Demo-Antrag abgelehnt. Im echten Ablauf bliebe der Zugang gesperrt.");});actions.append(b);});
+ }else{const b=document.createElement("button");b.type="button";b.className="btn secondary";b.textContent="Test zurücksetzen";b.addEventListener("click",()=>{registrationDemoState=null;renderRegistrationDemo();message("registrationDemoStatus","Test zurückgesetzt. Du kannst einen neuen Demo-Antrag erzeugen.");});actions.append(b);}
+ tr.append(actions);body.append(tr);
+}
+el("createRegistrationDemo").addEventListener("click",()=>{registrationDemoState="pending";renderRegistrationDemo();message("registrationDemoStatus","Demo-Antrag erzeugt. Status: Ausstehend. Wähle Freigabe oder Ablehnung.");});
 async function loadNox7RegistrationAdmin(){if(!currentAccessIsAdmin)return;await Promise.all([loadNox7RegistrationRequests(),loadNox7InvitationCodes()]);}
 async function loadNox7RegistrationRequests(){
  const body=el("registrationRequestRows");body.replaceChildren();const {data,error}=await db.rpc("admin_list_nox7_registration_requests");
