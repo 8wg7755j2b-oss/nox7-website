@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d18"><title>Alliance Hub · Plattformverwaltung</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#080d18;--panel:#111c2e;--line:#293b56;--cyan:#62e7ff;--gold:#e9c16f;--muted:#9cacc3;--white:#f3f7ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% -15%,#1c345a 0,transparent 40%),var(--bg);color:var(--white);font:15px/1.55 system-ui,Segoe UI,Arial}
+header{border-bottom:1px solid var(--line);background:#080d18ed}.top,.wrap{max-width:1180px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.logo{font-weight:950;letter-spacing:.14em}.logo span{color:var(--cyan)}
+button{font:inherit;cursor:pointer;border:1px solid #3b6d8b;border-radius:8px;padding:9px 13px;background:#17435a;color:white;font-weight:750}.secondary{background:transparent;border-color:#4a5c77}
+.eyebrow{color:var(--gold);font-size:11px;letter-spacing:.2em;font-weight:900}h1{font-size:clamp(30px,5vw,48px);margin:5px 0}.muted,small{color:var(--muted)}
+.notice{padding:12px;background:#12313a;border:1px solid #24606a;border-radius:8px;margin:14px 0;white-space:pre-wrap}.error{background:#381d27;border-color:#754050;color:#ffd2dc}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.stat,.panel{background:linear-gradient(145deg,#142239,#0d1626);border:1px solid var(--line);border-radius:13px;padding:18px;min-width:0}.stat span{color:var(--muted);font-size:12px}.stat strong{display:block;color:var(--cyan);font-size:30px;overflow-wrap:anywhere}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.tab{background:#17263c;border-color:var(--line);color:var(--muted)}.tab.active{background:#17394a;border-color:var(--cyan);color:white}
+table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line)}th{font-size:11px;color:var(--muted);text-transform:uppercase}.tablewrap{overflow:auto}
+.hidden{display:none!important}.panel h2{margin:0 0 12px}.empty{padding:16px;color:var(--muted)}footer{color:var(--muted);font-size:12px;padding:25px 0}
+@media(max-width:750px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:14px}}
+</style></head>
+<body>
+<header><div class="top"><div class="logo">ALLIANCE<span>HUB</span> <small>· PLATTFORM-ADMIN</small></div><div><button class="secondary" id="homeBtn">Zur Plattform</button> <button class="secondary" id="logoutBtn">Abmelden</button></div></div></header>
+<main class="wrap">
+<div class="eyebrow">ZENTRALE SYSTEMVERWALTUNG</div><h1>Plattform Command Center</h1>
+<div class="muted">Unabhängig von Allianz und R5-Rolle · Zugriff nur für den festgelegten Plattformadministrator</div>
+<div id="status" class="notice">Zugriff wird geprüft …</div>
+<section id="dashboard" class="hidden">
+<div class="grid">
+<div class="stat"><span>Allianzen</span><strong id="allianceCount">–</strong></div>
+<div class="stat"><span>Spielerprofile</span><strong id="profileCount">–</strong></div>
+<div class="stat"><span>Aktive Profile</span><strong id="activeCount">–</strong></div>
+<div class="stat"><span>Konten</span><strong id="accountCount">–</strong></div>
+</div>
+<div class="tabs">
+<button class="tab active" data-tab="alliances">Allianzen</button>
+<button class="tab" data-tab="profiles">Mitglieder & Konten</button>
+</div>
+<section class="panel" id="alliancesPanel"><h2>Alle Allianzen</h2><div class="tablewrap"><table><thead><tr><th>Allianz</th><th>Slug</th><th>Profile</th><th>Aktiv</th></tr></thead><tbody id="alliancesRows"><tr><td colspan="4">Wird geladen …</td></tr></tbody></table></div></section>
+<section class="panel hidden" id="profilesPanel"><h2>Alle Spielerprofile</h2><div class="tablewrap"><table><thead><tr><th>Spieler</th><th>Allianz</th><th>Rang</th><th>Status</th><th>Kampfkraft</th><th>Konto-ID</th></tr></thead><tbody id="profilesRows"><tr><td colspan="6">Wird geladen …</td></tr></tbody></table></div></section>
+<div class="notice">Erste Ausbaustufe: sichere Gesamtübersicht und Listen. Erstellen, sperren, Rechte ändern und Einladungscodes verwalten ergänzen wir erst mit eigenen, serverseitig geschützten Aktionen.</div>
+</section>
+</main><footer class="wrap">Alliance Hub · Plattformverwaltung</footer>
+<script>
+(()=> {
+const ADMIN_ID='9cd89136-4682-4e6a-84ba-43c41327fa93';
+const $=id=>document.getElementById(id);let db;
+function status(t,error=false){$('status').textContent=t;$('status').classList.toggle('error',error)}
+function cell(row,value){const td=document.createElement('td');td.textContent=value==null||value===''?'–':String(value);row.append(td)}
+async function init(){
+ $('homeBtn').onclick=()=>location.href='index.html';$('logoutBtn').onclick=async()=>{if(db)await db.auth.signOut();location.href='konto.html'};
+ if(!window.NOX7_CONFIG?.url||!window.NOX7_CONFIG?.anonKey||!window.supabase?.createClient){status('Datenbankkonfiguration fehlt.',true);return}
+ db=window.supabase.createClient(window.NOX7_CONFIG.url,window.NOX7_CONFIG.anonKey);
+ const {data,error}=await db.auth.getSession();if(error){status(error.message,true);return}
+ if(!data.session){status('Bitte zuerst über dein Plattformkonto anmelden.',true);return}
+ if(data.session.user.id!==ADMIN_ID){status('Zugriff verweigert. Dieses Konto ist nicht als Plattformadministrator freigeschaltet.',true);return}
+ const [overview,alliances,profiles]=await Promise.all([
+  db.rpc('platform_admin_get_overview'),db.rpc('platform_admin_list_alliances'),db.rpc('platform_admin_list_profiles')
+ ]);
+ const failure=[overview,alliances,profiles].find(x=>x.error);
+ if(failure){status('Die Plattform-Adminfunktionen sind noch nicht freigeschaltet. Bitte zuerst die Migration 018 in Supabase ausführen. Details: '+failure.error.message,true);return}
+ const o=overview.data||{};
+ $('allianceCount').textContent=o.alliances??0;$('profileCount').textContent=o.profiles??0;$('activeCount').textContent=o.active_profiles??0;$('accountCount').textContent=o.accounts??0;
+ const ar=$('alliancesRows');ar.replaceChildren();
+ (alliances.data||[]).forEach(a=>{const tr=document.createElement('tr');cell(tr,a.alliance_name);cell(tr,a.alliance_slug);cell(tr,a.member_count);cell(tr,a.active_member_count);ar.append(tr)});
+ if(!alliances.data?.length){const tr=document.createElement('tr');cell(tr,'Noch keine Allianzen',null);ar.append(tr)}
+ const pr=$('profilesRows');pr.replaceChildren();
+ (profiles.data||[]).forEach(p=>{const tr=document.createElement('tr');cell(tr,p.display_name);cell(tr,p.alliance_name);cell(tr,p.game_rank);cell(tr,p.profile_status);cell(tr,p.power==null?'–':Number(p.power).toLocaleString('de-AT'));cell(tr,p.owner_id);pr.append(tr)});
+ if(!profiles.data?.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=6;td.textContent='Noch keine Profile vorhanden.';tr.append(td);pr.append(tr)}
+ $('dashboard').classList.remove('hidden');status('Plattformadministrator bestätigt. Daten wurden sicher geladen.');
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));$('alliancesPanel').classList.toggle('hidden',b.dataset.tab!=='alliances');$('profilesPanel').classList.toggle('hidden',b.dataset.tab!=='profiles')}));
+init().catch(e=>status(e.message||'Unbekannter Fehler',true));
+})();
+</script></body></html>
