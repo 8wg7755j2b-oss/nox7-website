@@ -171,3 +171,30 @@ end;
 $$;
 revoke all on function public.admin_review_nox7_registration(uuid,boolean,text) from public;
 grant execute on function public.admin_review_nox7_registration(uuid,boolean,text) to authenticated;
+
+
+create or replace function public.admin_list_nox7_invitation_codes()
+returns table(id uuid,created_at timestamptz,expires_at timestamptz,max_uses integer,uses_count integer,revoked_at timestamptz)
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if not public.nox7_is_primary_admin() then raise exception 'Keine Berechtigung.'; end if;
+  return query select c.id,c.created_at,c.expires_at,c.max_uses,c.uses_count,c.revoked_at
+    from public.nox7_invitation_codes c order by c.created_at desc limit 100;
+end;
+$$;
+revoke all on function public.admin_list_nox7_invitation_codes() from public;
+grant execute on function public.admin_list_nox7_invitation_codes() to authenticated;
+
+create or replace function public.admin_revoke_nox7_invitation(p_invitation_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+begin
+  if not public.nox7_is_primary_admin() then raise exception 'Keine Berechtigung.'; end if;
+  update public.nox7_invitation_codes set revoked_at=now()
+    where id=p_invitation_id and revoked_at is null;
+  return found;
+end;
+$$;
+revoke all on function public.admin_revoke_nox7_invitation(uuid) from public;
+grant execute on function public.admin_revoke_nox7_invitation(uuid) to authenticated;
