@@ -157,7 +157,7 @@ for(let si=0;si<3;si++){
    const fields=el('div','member-detail-grid');fields.style.marginTop='8px';
    gearInputs[part]={
     level:field(fields,part+' Level',gear.level??'','number'),
-    stars:starSelector(fields,part+' Sterne',gear.stars??'',part==='Waffe')
+    stars:starSelector(fields,part+' Sterne',gear.stars??'',true)
    };
    fold.append(fields);card.append(fold);
   });
