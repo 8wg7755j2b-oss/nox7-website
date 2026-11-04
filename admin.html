@@ -145,6 +145,16 @@ body[data-admin-page="profile"] #memberOverview,body[data-admin-page="profile"] 
 </section>
 <section class="card" id="memberManagement">
 <div class="eyebrow">PERSONNEL</div><h2>Mitgliederverwaltung</h2>
+<div class="card hidden" id="registrationAdminPanel" style="margin:16px 0;border-color:#b18b43">
+  <div class="eyebrow">NOX7 · ACCESS CONTROL</div><h3>Registrierungen & Einladungscodes</h3>
+  <p class="muted">Neue Konten benötigen einen gültigen Einladungscode, bestätigte E-Mail und deine persönliche Freigabe. Nur der Haupt-ADMIN kann Anträge genehmigen oder Codes verwalten.</p>
+  <div class="grid"><div><label for="inviteMaxUses">Maximale Verwendungen</label><input id="inviteMaxUses" type="number" min="1" max="500" value="1"></div><div><label for="inviteExpiryDays">Gültigkeit in Tagen (0 = unbegrenzt)</label><input id="inviteExpiryDays" type="number" min="0" max="365" value="7"></div></div>
+  <button class="btn" id="createInviteCode" type="button">Einladungscode erstellen</button>
+  <div id="inviteCodeResult" class="notice" aria-live="polite">Neue Codes werden nur einmal vollständig angezeigt. Bitte sicher weitergeben.</div>
+  <h3>Offene Registrierungsanträge</h3><div class="tablewrap"><table><thead><tr><th>Spielername</th><th>E-Mail</th><th>Antrag</th><th>Aktionen</th></tr></thead><tbody id="registrationRequestRows"><tr><td colspan="4">Wird geladen …</td></tr></tbody></table></div>
+  <div id="registrationAdminStatus" class="notice" role="status" aria-live="polite"></div>
+  <h3>Erstellte Einladungscodes</h3><div class="tablewrap"><table><thead><tr><th>Erstellt</th><th>Verwendungen</th><th>Gültig bis</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="invitationCodeRows"><tr><td colspan="5">Wird geladen …</td></tr></tbody></table></div>
+</div>
 <div class="card hidden" id="r5TransferPanel" style="margin:16px 0">
 <div class="eyebrow">LEADERSHIP TRANSFER</div><h3>R5 übergeben</h3>
 <p class="muted">Wähle ein aktives Mitglied oder dich selbst. Deine ADMIN-Berechtigung bleibt auch nach der Übergabe erhalten.</p>
@@ -222,6 +232,8 @@ async function checkAdmin(user){
   ["adminOnlyNews","adminOnlyRankLabels","adminOnlyProfile"].forEach(id=>{if(isAdmin)show(id);else hide(id);});
   ["shortcutNews","shortcutRanks","shortcutProfile"].forEach(id=>{if(isAdmin)show(id);else hide(id);});
   if(isAdmin){
+    show("registrationAdminPanel");
+    await loadNox7RegistrationAdmin();
     el("adminOwnName").value=data.display_name||"";
     el("adminOwnPower").value=data.power==null?"":String(data.power);
     el("adminOwnRank").value=rankCodes.includes(data.game_rank)?data.game_rank:"R5";
@@ -531,6 +543,22 @@ async function loadPendingDailyStats(){
   });
 }
 let memberView="R5";
+async function loadNox7RegistrationAdmin(){if(!currentAccessIsAdmin)return;await Promise.all([loadNox7RegistrationRequests(),loadNox7InvitationCodes()]);}
+async function loadNox7RegistrationRequests(){
+ const body=el("registrationRequestRows");body.replaceChildren();const {data,error}=await db.rpc("admin_list_nox7_registration_requests");
+ if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=4;td.textContent="Anträge konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);return;}
+ if(!data?.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=4;td.textContent="Keine offenen Registrierungsanträge.";tr.append(td);body.append(tr);return;}
+ data.forEach(r=>{const tr=document.createElement("tr");[r.display_name||"NOX7-Mitglied",r.email,new Date(r.requested_at).toLocaleString("de-AT")].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td)});const actions=document.createElement("td");
+ [["Freischalten",true],["Ablehnen",false]].forEach(([label,approve])=>{const b=document.createElement("button");b.type="button";b.className="btn secondary";b.textContent=label;b.style.margin="3px";b.addEventListener("click",async()=>{if(!confirm((approve?"Konto von ":"Registrierung von ")+(r.display_name||r.email)+(approve?" freischalten?":" wirklich ablehnen?")))return;b.disabled=true;const {error:reviewError}=await db.rpc("admin_review_nox7_registration",{p_user_id:r.user_id,p_approve:approve,p_note:approve?"Freigabe durch ADMIN":"Registrierung abgelehnt"});b.disabled=false;if(reviewError){message("registrationAdminStatus","Aktion fehlgeschlagen: "+reviewError.message,true);return;}message("registrationAdminStatus",approve?"Mitglied wurde freigeschaltet.":"Registrierung wurde abgelehnt.");await loadNox7RegistrationAdmin();await loadMembers();});actions.append(b)});tr.append(actions);body.append(tr)});
+}
+async function loadNox7InvitationCodes(){
+ const body=el("invitationCodeRows");body.replaceChildren();const {data,error}=await db.rpc("admin_list_nox7_invitation_codes");
+ if(error){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Codes konnten nicht geladen werden: "+error.message;tr.append(td);body.append(tr);return;}
+ if(!data?.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="Noch keine Einladungscodes erstellt.";tr.append(td);body.append(tr);return;}
+ data.forEach(code=>{const tr=document.createElement("tr");[new Date(code.created_at).toLocaleString("de-AT"),code.uses_count+" / "+code.max_uses,code.expires_at?new Date(code.expires_at).toLocaleString("de-AT"):"Unbegrenzt",code.revoked_at?"Widerrufen":(code.expires_at&&new Date(code.expires_at)<new Date()?"Abgelaufen":"Aktiv")].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td)});const action=document.createElement("td");
+ if(!code.revoked_at&&(!code.expires_at||new Date(code.expires_at)>new Date())){const b=document.createElement("button");b.type="button";b.className="btn secondary";b.textContent="Widerrufen";b.addEventListener("click",async()=>{if(!confirm("Einladungscode wirklich widerrufen?"))return;b.disabled=true;const {error}=await db.rpc("admin_revoke_nox7_invitation",{p_invitation_id:code.id});b.disabled=false;if(error){message("registrationAdminStatus","Widerruf fehlgeschlagen: "+error.message,true);return;}message("registrationAdminStatus","Einladungscode wurde widerrufen.");await loadNox7InvitationCodes()});action.append(b)}else action.textContent="—";tr.append(action);body.append(tr)});
+}
+el("createInviteCode").addEventListener("click",async()=>{const maxUses=Number(el("inviteMaxUses").value),days=Number(el("inviteExpiryDays").value),button=el("createInviteCode");if(!Number.isInteger(maxUses)||maxUses<1||maxUses>500||!Number.isInteger(days)||days<0||days>365){message("inviteCodeResult","Bitte gültige Werte eingeben (1–500 Verwendungen, 0–365 Tage).",true);return;}button.disabled=true;message("inviteCodeResult","Erstelle Einladungscode …");const expiresAt=days===0?null:new Date(Date.now()+days*86400000).toISOString();const {data,error}=await db.rpc("admin_create_nox7_invitation",{p_max_uses:maxUses,p_expires_at:expiresAt});button.disabled=false;if(error){message("inviteCodeResult","Code konnte nicht erstellt werden: "+error.message,true);return;}el("inviteCodeResult").textContent="NEUER EINLADUNGSCODE: "+data+" — Bitte jetzt kopieren und sicher weitergeben. Der vollständige Code wird später nicht erneut angezeigt.";await loadNox7InvitationCodes()});
 async function loadMembers(preserveStatus=false){
   const {data,error}=await db.from("profiles").select("id,display_name,game_rank,power,status").order("display_name",{ascending:true}).limit(500);
   const body=el("memberRows");body.replaceChildren();
