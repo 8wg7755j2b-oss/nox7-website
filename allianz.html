@@ -128,17 +128,22 @@ const original=Array.isArray(p.squad_heroes)?p.squad_heroes:[[],[],[]];
 const heroInputs=[];
 const gearParts=['Waffe','Rüstung','Chip','Radar'];
 for(let si=0;si<3;si++){
- const squadBox=el('section','member-detail-item');squadBox.style.marginTop='12px';
- squadBox.append(el('h4','','Squad '+(si+1)));
- const slots=[];
+ const squadBox=el('details','member-detail-item');squadBox.style.marginTop='12px';squadBox.style.padding='10px';
  const existing=Array.isArray(original[si])?original[si]:[];
+ const squadSummary=el('summary','', 'Squad '+(si+1)+' · '+existing.filter(h=>h&&String(h.name||'').trim()).length+'/5 Helden');
+ squadSummary.style.cssText='cursor:pointer;font-weight:800;color:var(--accent);padding:5px';
+ squadBox.append(squadSummary);
+ const slots=[];
  for(let hi=0;hi<5;hi++){
   const source=existing[hi]&&typeof existing[hi]==='object'?existing[hi]:{};
-  const card=el('div','member-detail-item');card.style.marginTop='9px';
-  card.append(el('strong','','Held '+(hi+1)));
-  const heroName=heroSelector(card,'Held auswählen',source.name||'');
-  const heroLevel=field(card,'Heldenlevel',source.level??'','number');
-  const heroStars=starSelector(card,'Heldensterne',source.stars??'');
+  const card=el('details','member-detail-item');card.style.marginTop='9px';card.style.padding='9px';
+  const cardSummary=el('summary','', (source.name||'Held auswählen')+' · Slot '+(hi+1));
+  cardSummary.style.cssText='cursor:pointer;font-weight:750;padding:4px';
+  card.append(cardSummary);
+  const heroFields=el('div','member-detail-grid');heroFields.style.marginTop='8px';
+  const heroName=heroSelector(heroFields,'Held auswählen',source.name||'');
+  const heroLevel=field(heroFields,'Heldenlevel',source.level??'','number');
+  const heroStars=starSelector(heroFields,'Heldensterne',source.stars??'');
   const gearInputs={};
   gearParts.forEach(part=>{
    const gear=source.gear&&source.gear[part]&&typeof source.gear[part]==='object'?source.gear[part]:{};
@@ -153,8 +158,9 @@ for(let si=0;si<3;si++){
    };
    fold.append(fields);card.append(fold);
   });
+  heroName.addEventListener('change',()=>{cardSummary.textContent=(heroName.value||'Held auswählen')+' · Slot '+(hi+1)});
   slots.push({source,heroName,heroLevel,heroStars,gearInputs});
-  squadBox.append(card);
+  card.append(heroFields);squadBox.append(card);
  }
  heroInputs.push(slots);root.append(squadBox);
 }
