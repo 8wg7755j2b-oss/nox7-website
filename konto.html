@@ -37,7 +37,7 @@
  </section>
  <section id="accountSection" class="hidden">
   <div class="card">
-   <div class="eyebrow">DEIN KONTO</div><div class="profile" style="margin-top:12px"><div><h3 id="accountEmail">—</h3><div class="small">Zentrale Anmeldung</div></div><button id="logoutBtn" class="secondary">Abmelden</button></div>
+   <div class="eyebrow">DEIN KONTO</div><div class="profile" style="margin-top:12px"><div><h3 id="accountEmail">—</h3><div class="small">Zentrale Anmeldung</div></div><div class="actions"><a id="platformAdminLink" class="button hidden" href="plattform-admin.html">Plattform-Admin</a><button id="logoutBtn" class="secondary">Abmelden</button></div></div>
    <h2>Meine Allianzprofile</h2><p class="muted">Aktive Profile kannst du auswählen. Offene Beitrittsanfragen werden hier mit ihrem Status angezeigt.</p>
    <div id="profilesList"></div><div id="selectedContext" class="notice hidden"></div>
    <div id="profileMessage" class="notice" role="status" aria-live="polite"></div>
@@ -64,6 +64,7 @@
  const storageKey = 'allianceHub.selectedProfileId';
  function message(id,text,isError=false){const el=$(id);el.textContent=text;el.classList.toggle('error',isError);el.classList.remove('hidden')}
  function setBusy(id,busy){$(id).disabled=busy}
+ function updatePlatformAdminLink(){const link=$('platformAdminLink');if(!link)return;link.classList.toggle('hidden',sessionUser?.id!=='9cd89136-4682-4e6a-84ba-43c41327fa93')}
  function init(){
   if(!window.NOX7_CONFIG?.url || !window.NOX7_CONFIG?.anonKey || !window.supabase?.createClient){
    message('configMessage','Die Verbindung zur Kontodatenbank konnte nicht geladen werden. Bitte config.js und die Internetverbindung prüfen.',true);return;
@@ -76,11 +77,13 @@
   $('joinBtn').addEventListener('click',requestJoin);
   db.auth.onAuthStateChange((event,session)=>{
    sessionUser=session?.user||null;
+   updatePlatformAdminLink();
    if(sessionUser){$('authSection').classList.add('hidden');$('accountSection').classList.remove('hidden');$('accountEmail').textContent=sessionUser.email||'Angemeldet';setTimeout(loadProfiles,0)}
    else{$('accountSection').classList.add('hidden');$('authSection').classList.remove('hidden');$('profilesList').replaceChildren();localStorage.removeItem(storageKey)}
   });
   db.auth.getSession().then(({data})=>{
    sessionUser=data.session?.user||null;
+   updatePlatformAdminLink();
    if(sessionUser){$('authSection').classList.add('hidden');$('accountSection').classList.remove('hidden');$('accountEmail').textContent=sessionUser.email||'Angemeldet';loadProfiles()}
   });
  }
