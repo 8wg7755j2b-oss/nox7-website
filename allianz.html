@@ -142,11 +142,16 @@ for(let si=0;si<3;si++){
   const gearInputs={};
   gearParts.forEach(part=>{
    const gear=source.gear&&source.gear[part]&&typeof source.gear[part]==='object'?source.gear[part]:{};
-   const heading=el('div','small','Ausrüstung: '+part);heading.style.marginTop='8px';card.append(heading);
+   const fold=el('details','member-detail-item');fold.style.marginTop='8px';fold.style.padding='8px';
+   const summary=el('summary','',part+' · '+(gear.level!=null?'Level '+gear.level:'Level –')+' · '+(gear.stars!=null?gear.stars+' Sterne':'Sterne –'));
+   summary.style.cssText='cursor:pointer;font-weight:750;color:var(--accent);padding:4px';
+   fold.append(summary);
+   const fields=el('div','member-detail-grid');fields.style.marginTop='8px';
    gearInputs[part]={
-    level:field(card,part+' Level',gear.level??'','number'),
-    stars:starSelector(card,part+' Sterne',gear.stars??'',part==='Waffe')
+    level:field(fields,part+' Level',gear.level??'','number'),
+    stars:starSelector(fields,part+' Sterne',gear.stars??'',part==='Waffe')
    };
+   fold.append(fields);card.append(fold);
   });
   slots.push({source,heroName,heroLevel,heroStars,gearInputs});
   squadBox.append(card);
