@@ -77,6 +77,9 @@ begin
      or length(trim(coalesce(p_code,''))) < 6 then
     return jsonb_build_object('ok',false,'message','Bitte E-Mail-Adresse und Einladungscode prüfen.');
   end if;
+  if exists (select 1 from public.profiles p join auth.users u on u.id=p.id where lower(u.email)=v_email and p.status='active') then
+    return jsonb_build_object('ok',false,'message','Für diese E-Mail-Adresse besteht bereits ein aktives NOX7-Konto.');
+  end if;
   select * into v_code from public.nox7_invitation_codes
   where code_hash = encode(extensions.digest(upper(trim(p_code)), 'sha256'),'hex')
     and revoked_at is null
