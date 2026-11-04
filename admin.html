@@ -224,7 +224,7 @@ async function start(){
 async function checkAdmin(user){
   const {data, error}=await db.from("profiles").select("id,role,display_name,game_rank,power,status").eq("id",user.id).maybeSingle();
   if(error){message("status","Profil konnte nicht geprüft werden: "+error.message,true);return;}
-  const isAdmin=!!data && data.id===ADMIN_ID && data.role==="admin";
+  const isAdmin=!!data && data.id===ADMIN_ID && data.role==="admin" && data.status==="active";
   const isLeadership=!!data && data.status==="active" && ["R4","R5"].includes(data.game_rank);
   if(!data || (!isAdmin && !isLeadership)){
     message("status","Angemeldet, aber keine Berechtigung für die Allianzverwaltung.",true);show("denied");show("logoutBtn");return;
