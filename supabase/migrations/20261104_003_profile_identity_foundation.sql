@@ -41,6 +41,20 @@ begin
 end
 $migration$;
 
+-- Every player profile must belong to one account and one alliance.
+-- The preflight above guarantees these constraints can be applied safely.
+alter table public.profiles
+  alter column owner_id set not null,
+  alter column alliance_id set not null;
+
+-- Preserve the old account-deletion behavior: deleting an auth account removes
+-- its owned profiles, and existing profile-history FKs cascade from those IDs.
+alter table public.profiles
+  drop constraint if exists profiles_owner_id_fkey;
+alter table public.profiles
+  add constraint profiles_owner_id_fkey
+  foreign key (owner_id) references auth.users(id) on delete cascade;
+
 -- A player profile is no longer required to share its UUID with auth.users.
 -- owner_id remains the account relationship. Existing profile IDs are untouched.
 alter table public.profiles
