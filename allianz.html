@@ -47,6 +47,33 @@ function renderMemberEditor(root,p){
 root.replaceChildren();root.hidden=false;
 root.append(el('h3','','Mitglied bearbeiten: '+p.display_name));
 const form=el('div','member-detail-grid');
+const heroCatalogue=[
+ {group:'Panzer',names:['Kimberly','Murphy','Williams','Marshall','Stetmann','Mason','Violet','Scarlett','Monica','Richard','Farhad','Gump','Loki']},
+ {group:'Flugzeug',names:['DVA','Morrison','Schuyler','Carlie','Lucius','Sarah','Cage','Maxwell','Ambolt']},
+ {group:'Rakete',names:['Tesla','Fiona','Swift','Adam','McGregor','Venom','Braz','Elsa','Kane']}
+];
+function heroSelector(parent,label,value){
+ const wrap=el('label','member-detail-item');wrap.append(el('span','',label));
+ const select=document.createElement('select');
+ select.style.cssText='width:100%;margin-top:5px;padding:9px;border-radius:7px;border:1px solid #52647d;background:#0b1727;color:#eef4fc';
+ const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='— Held auswählen —';select.append(placeholder);
+ let found=false;
+ heroCatalogue.forEach(group=>{
+  const optgroup=document.createElement('optgroup');optgroup.label=group.group;
+  group.names.forEach(hero=>{
+   const option=document.createElement('option');option.value=hero;option.textContent=hero;
+   if(hero===value){option.selected=true;found=true}
+   optgroup.append(option);
+  });
+  select.append(optgroup);
+ });
+ if(value&&!found){
+  const optgroup=document.createElement('optgroup');optgroup.label='Weitere / ältere Helden';
+  const option=document.createElement('option');option.value=value;option.textContent=value+' (gespeicherter Name)';option.selected=true;
+  optgroup.append(option);select.append(optgroup);
+ }
+ wrap.append(select);parent.append(wrap);return select;
+}
 function field(parent,label,value,type='text'){
  const wrap=el('label','member-detail-item');wrap.append(el('span','',label));
  const input=el('input');input.type=type;input.value=value==null?'':String(value);
@@ -76,7 +103,7 @@ for(let si=0;si<3;si++){
   const source=existing[hi]&&typeof existing[hi]==='object'?existing[hi]:{};
   const card=el('div','member-detail-item');card.style.marginTop='9px';
   card.append(el('strong','','Held '+(hi+1)));
-  const heroName=field(card,'Heldenname',source.name||'');
+  const heroName=heroSelector(card,'Held auswählen',source.name||'');
   const heroLevel=field(card,'Heldenlevel',source.level??'','number');
   const heroStars=field(card,'Heldensterne',source.stars??'','number');
   const gearInputs={};
