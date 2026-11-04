@@ -5,6 +5,8 @@ begin;
 
 alter table public.alliances
   add column if not exists is_enabled boolean not null default true;
+alter table public.profiles
+  add column if not exists platform_locked boolean not null default false;
 
 create table if not exists public.platform_admin_audit (
   id uuid primary key default gen_random_uuid(),
@@ -96,13 +98,13 @@ end;
 $function$;
 
 create or replace function public.platform_admin_profiles()
-returns table(profile_id uuid, alliance_id uuid, alliance_name text, display_name text, game_rank text, profile_role text, profile_status text, owner_id uuid, account_email text, power bigint, created_at timestamptz)
+returns table(profile_id uuid, alliance_id uuid, alliance_name text, display_name text, game_rank text, profile_role text, profile_status text, platform_locked boolean, owner_id uuid, account_email text, power bigint, created_at timestamptz)
 language plpgsql stable security definer set search_path=''
 as $function$
 begin
   perform public.platform_admin_guard();
   return query
-  select p.id,p.alliance_id,a.name,p.display_name,p.game_rank,p.role,p.status,p.owner_id,u.email,p.power,p.created_at
+  select p.id,p.alliance_id,a.name,p.display_name,p.game_rank,p.role,p.status,p.platform_locked,p.owner_id,u.email,p.power,p.created_at
   from public.profiles p
   left join public.alliances a on a.id=p.alliance_id
   left join auth.users u on u.id=p.owner_id
@@ -169,7 +171,7 @@ begin
 end;
 $function$;
 
-create or replace function public.platform_admin_set_profile(p_profile_id uuid,p_rank text,p_status text)
+create or replace function public.platform_admin_set_profile(p_profile_id uuid,p_rank text,p_locked boolean)
 returns void
 language plpgsql security definer set search_path=''
 as $function$
@@ -177,18 +179,15 @@ declare v_alliance uuid; v_old_rank text; v_old_status text;
 begin
   perform public.platform_admin_guard();
   if p_rank not in ('R1','R2','R3','R4','R5') then raise exception 'Ungültiger Rang'; end if;
-  if p_status not in ('active','suspended','left','kicked','transferred') then raise exception 'Ungültiger Profilstatus'; end if;
+  if p_locked is null then raise exception 'Sperrstatus fehlt'; end if;
   select alliance_id,game_rank,status into v_alliance,v_old_rank,v_old_status from public.profiles where id=p_profile_id for update;
   if v_alliance is null then raise exception 'Profil nicht gefunden'; end if;
   if p_rank='R5' and p_status='active' then
     update public.profiles set game_rank='R1' where alliance_id=v_alliance and id<>p_profile_id and game_rank='R5' and status='active';
   end if;
-  update public.profiles set game_rank=p_rank,status=p_status,
-    archived_at=case when p_status='active' then null else coalesce(archived_at,now()) end,
-    archive_reason=case when p_status='active' then null else p_status end,
-    archived_by=case when p_status='active' then null else auth.uid() end
+  update public.profiles set game_rank=p_rank,platform_locked=p_locked
   where id=p_profile_id;
-  perform public.platform_admin_log('profile.update','profile',p_profile_id::text,jsonb_build_object('old_rank',v_old_rank,'rank',p_rank,'old_status',v_old_status,'status',p_status));
+  perform public.platform_admin_log('profile.update','profile',p_profile_id::text,jsonb_build_object('old_rank',v_old_rank,'rank',p_rank,'old_status',v_old_status,'platform_locked',p_locked));
 end;
 $function$;
 
@@ -295,7 +294,7 @@ revoke all on function public.platform_admin_join_requests() from public,anon;
 revoke all on function public.platform_admin_invites() from public,anon;
 revoke all on function public.platform_admin_create_alliance(text,text) from public,anon;
 revoke all on function public.platform_admin_update_alliance(uuid,text,text,boolean) from public,anon;
-revoke all on function public.platform_admin_set_profile(uuid,text,text) from public,anon;
+revoke all on function public.platform_admin_set_profile(uuid,text,boolean) from public,anon;
 revoke all on function public.platform_admin_transfer_profile(uuid,text) from public,anon;
 revoke all on function public.platform_admin_review_request(uuid,boolean,text) from public,anon;
 revoke all on function public.platform_admin_revoke_invite(uuid) from public,anon;
