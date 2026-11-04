@@ -28,7 +28,7 @@ const ADMIN_ID='9cd89136-4682-4e6a-84ba-43c41327fa93', $=id=>document.getElement
 function msg(t,e=false){$('status').textContent=t;$('status').classList.toggle('error',e)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function date(v){return v?new Date(v).toLocaleString('de-AT'):'–'}
-async function rpc(name,args={}){const {data,error}=await db.rpc(name,args);if(error)throw error;return data}
+async function rpc(name,args={}){const {data,error}=await db.rpc(name,args);if(error)throw new Error(name+': '+error.message);return data}
 function tab(id){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));document.querySelectorAll('[id^="tab-"]').forEach(s=>s.classList.toggle('hidden',s.id!=='tab-'+id));}
 async function load(){
 msg('Daten werden geladen …');
