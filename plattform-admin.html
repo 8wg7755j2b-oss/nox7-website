@@ -37,7 +37,7 @@ try{
  rpc('platform_admin_dashboard'),rpc('platform_admin_alliances'),rpc('platform_admin_profiles'),rpc('platform_admin_join_requests'),rpc('platform_admin_invites'),rpc('platform_admin_list_settings'),rpc('platform_admin_audit_log'),rpc('platform_admin_deletion_requests')
  ]);
  alliances=a||[];profiles=p||[];requests=r||[];invites=i||[];deletions=d||[];
- $('nAll').textContent=dash.alliances??0;$('nEnabled').textContent=dash.enabled_alliances??0;$('nProfiles').textContent=dash.profiles??0;$('nActive').textContent=dash.active_profiles??0;$('nAccounts').textContent=dash.accounts??0;$('nRequests').textContent=dash.pending_requests??0;$('nInvites').textContent=dash.active_invites??0;$('nDeletions').textContent=deletions.filter(x=>x.status==='pending').length;
+ $('nAll').textContent=dash.alliances??0;$('nEnabled').textContent=dash.enabled_alliances??0;$('nProfiles').textContent=dash.profiles??0;$('nActive').textContent=dash.active_profiles??0;$('nAccounts').textContent=dash.accounts??0;$('nRequests').textContent=dash.pending_requests??0;$('nInvites').textContent=dash.active_invites??0;$('nDeletions').textContent=deletions.length;
  $('overviewText').textContent='Plattformstatus erfolgreich geladen. '+dash.alliances+' Allianzen, '+dash.profiles+' Spielerprofile und '+dash.pending_requests+' offene Beitrittsanfragen.';
  renderAlliances();renderProfiles();renderRequests();renderInvites();renderDeletions();renderSettings(s||[]);renderAudit(l||[]);msg('Plattformadministrator bestätigt · Daten aktuell.');
 }catch(e){msg('Fehler beim Laden: '+e.message,true)}
@@ -59,7 +59,7 @@ function renderInvites(){
  $('inviteRows').innerHTML=invites.map(i=>'<tr><td>'+esc(i.alliance_name)+'</td><td>'+date(i.created_at)+'</td><td>'+date(i.expires_at)+'</td><td>'+i.uses_count+' / '+i.max_uses+'</td><td>'+(i.revoked_at?'Widerrufen':i.uses_count>=i.max_uses?'Aufgebraucht':'Aktiv')+'</td><td>'+(!i.revoked_at?'<button class="danger" data-revoke-invite="'+i.invitation_id+'">Widerrufen</button>':'–')+'</td></tr>').join('')||'<tr><td colspan="6">Keine Einladungscodes.</td></tr>';
 }
 function renderDeletions(){
- $('deletionRows').innerHTML=deletions.filter(x=>x.status==='pending').map(x=>{
+ $('deletionRows').innerHTML=deletions.map(x=>{
   const expired=!!x.is_expired;
   const names=Array.isArray(x.profile_names)?x.profile_names.join(', '):String(x.profile_names||'–');
   return '<tr><td><b>'+esc(x.account_email)+'</b><br><small>'+esc(x.user_id)+'</small></td><td>'+esc(names)+'<br><small>'+Number(x.profile_count||0)+' Profil(e)</small></td><td>'+date(x.requested_at)+'</td><td>'+date(x.scheduled_for)+'</td><td><span class="pill">'+(expired?'Frist abgelaufen':'14-Tage-Frist läuft')+'</span></td><td>'+(expired?'<button class="danger" data-finalize-deletion="'+esc(x.user_id)+'">Endgültig löschen</button>':'<button class="secondary" disabled>Wartefrist</button>')+'</td></tr>';
@@ -85,7 +85,7 @@ document.addEventListener('click',e=>{
  if(b.dataset.review){const yes=b.dataset.approve==='true';if(!confirm(yes?'Beitrittsanfrage genehmigen?':'Beitrittsanfrage ablehnen?'))return;const note=prompt('Optionale interne Notiz:')||null;act(()=>rpc('platform_admin_review_request',{p_request_id:b.dataset.review,p_approve:yes,p_note:note}));}
  if(b.dataset.revokeInvite){if(!confirm('Einladungscode unwiderruflich für weitere Nutzung sperren?'))return;act(()=>rpc('platform_admin_revoke_invite',{p_invitation_id:b.dataset.revokeInvite}));}
  if(b.dataset.finalizeDeletion){
-  const item=deletions.find(x=>x.user_id===b.dataset.finalizeDeletion&&x.status==='pending');
+  const item=deletions.find(x=>x.user_id===b.dataset.finalizeDeletion);
   if(!item||!item.is_expired){msg('Die 14-Tage-Frist ist noch nicht abgelaufen.',true);return}
   if(!confirm('ACHTUNG: Konto '+item.account_email+' und alle zugehörigen Spielerprofile endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.'))return;
   act(async()=>{const result=await rpc('platform_admin_finalize_account_deletion',{p_user_id:item.user_id});msg('Konto endgültig gelöscht. Entfernte Spielerprofile: '+(result.deleted_profiles??0));});
