@@ -51,6 +51,12 @@
     <div class="field full"><button id="joinBtn" type="button">Beitritt beantragen</button></div>
    </div>
   </div>
+  <div class="card">
+   <div class="eyebrow">KONTO-SICHERHEIT</div><h2>Konto löschen</h2>
+   <p class="muted">Wenn du die Löschung beantragst, beginnt eine 14-tägige Wartefrist. Meldest du dich innerhalb dieser Frist erneut an, wird der Antrag automatisch storniert. Nach Ablauf wird dein Konto gesperrt. Die endgültige Löschung kann nur der Systemadministrator durchführen.</p>
+   <div class="actions"><button id="deleteAccountBtn" type="button" class="secondary">Löschung meines Kontos beantragen</button></div>
+   <div id="deletionMessage" class="notice hidden" role="status" aria-live="polite"></div>
+  </div>
  </section>
  <div id="configMessage" class="notice error hidden"></div>
 </main>
@@ -75,6 +81,7 @@
   $('signupBtn').addEventListener('click',signup);
   $('logoutBtn').addEventListener('click',logout);
   $('joinBtn').addEventListener('click',requestJoin);
+  $('deleteAccountBtn').addEventListener('click',requestAccountDeletion);
   db.auth.onAuthStateChange((event,session)=>{
    sessionUser=session?.user||null;
    updatePlatformAdminLink();
@@ -93,7 +100,20 @@
   setBusy('loginBtn',true);message('authMessage','Anmeldung läuft …');
   const {error}=await db.auth.signInWithPassword({email,password});
   setBusy('loginBtn',false);
-  if(error)message('authMessage',error.message,true);
+  if(error){message('authMessage',error.message,true);return}
+  const {data:deletion,error:deletionError}=await db.rpc('account_cancel_deletion_request');
+  if(deletionError){
+   message('profileMessage','Anmeldung erfolgreich, aber der Löschstatus konnte nicht geprüft werden: '+deletionError.message,true);
+   return;
+  }
+  if(deletion?.expired){
+   message('authMessage',deletion.message||'Die Löschfrist ist abgelaufen. Das Konto ist gesperrt.',true);
+   await db.auth.signOut();
+   return;
+  }
+  if(deletion?.cancelled){
+   message('profileMessage','Dein Löschantrag wurde durch die erneute Anmeldung storniert.');
+  }
  }
  async function resetPassword(){
   const email=$('email').value.trim();
@@ -156,6 +176,18 @@
   message('profileMessage','Aktives Profil: '+p.display_name+' · '+p.alliance_name+'. Allianzbereich wird geöffnet …');
   location.href='allianz.html';
   const context=$('selectedContext');context.textContent='Aktuell ausgewählt: '+p.display_name+' – '+p.alliance_name+' · '+p.game_rank+(p.can_manage_alliance?' · Allianzverwaltung möglich':'');context.classList.remove('hidden');
+ }
+ async function requestAccountDeletion(){
+  const confirmed=confirm('Möchtest du wirklich die Löschung deines Kontos beantragen?\n\nEs beginnt eine 14-tägige Wartefrist. Eine erneute Anmeldung innerhalb dieser Frist storniert den Antrag. Nach Ablauf wird das Konto gesperrt. Die endgültige Löschung erfolgt erst nach Freigabe durch den Systemadministrator.');
+  if(!confirmed)return;
+  setBusy('deleteAccountBtn',true);
+  message('deletionMessage','Löschantrag wird gespeichert …');
+  const {data,error}=await db.rpc('account_request_deletion');
+  setBusy('deleteAccountBtn',false);
+  if(error){message('deletionMessage','Löschantrag fehlgeschlagen: '+error.message,true);return}
+  const date=data?.scheduled_for?new Date(data.scheduled_for).toLocaleString('de-AT'):'in 14 Tagen';
+  message('deletionMessage','Dein Löschantrag ist vorgemerkt. Geplante Sperre: '+date+'. Du wirst jetzt abgemeldet. Eine erneute Anmeldung innerhalb der Frist storniert den Antrag.');
+  await db.auth.signOut();
  }
  async function requestJoin(){
   const name=$('joinName').value.trim(),code=$('joinCode').value.trim().toUpperCase();
