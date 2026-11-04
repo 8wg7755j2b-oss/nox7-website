@@ -150,7 +150,8 @@
   if(error||!data?.length){message('profileMessage',error?.message||'Dieses Profil kann nicht ausgewählt werden.',true);return}
   localStorage.setItem(storageKey,profileId);
   const p=data[0];
-  message('profileMessage','Aktives Profil: '+p.display_name+' · '+p.alliance_name+'. Die Profilwahl wurde auf diesem Gerät gespeichert.');
+  message('profileMessage','Aktives Profil: '+p.display_name+' · '+p.alliance_name+'. Allianzbereich wird geöffnet …');
+  location.href='allianz.html';
   const context=$('selectedContext');context.textContent='Aktuell ausgewählt: '+p.display_name+' – '+p.alliance_name+' · '+p.game_rank+(p.can_manage_alliance?' · Allianzverwaltung möglich':'');context.classList.remove('hidden');
  }
  async function requestJoin(){
