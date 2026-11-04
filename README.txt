@@ -85,3 +85,23 @@ SCHRITT 8 – Vollständiges Löschen eines Mitgliedskontos
 5. Das eigene Konto, das geschützte ADMIN-Konto sowie R5-Konten sind gegen Löschung geschützt.
 
 WICHTIG: Das Löschen über Supabase Auth entfernt das Auth-Konto und das Profil, sofern die profile.id-Fremdschlüsselbeziehung wie vorgesehen ON DELETE CASCADE verwendet. Weitere Tabellen werden nur automatisch mitgelöscht, wenn deren Fremdschlüssel ebenfalls ON DELETE CASCADE besitzen. Storage-Dateien werden dadurch nicht automatisch entfernt. Vor dem produktiven Einsatz die Fremdschlüssel und vorhandene Storage-Buckets prüfen und ein Datenbank-Backup erstellen.
+
+
+SCHRITT 9 – Einladungscode + ADMIN-Freigabe aktivieren (NEU)
+1. Supabase Dashboard öffnen und das NOX7-Projekt auswählen.
+2. SQL Editor > New query öffnen.
+3. Die Datei supabase/nox7-invitation-registration.sql aus dem GitHub-Repository vollständig öffnen, kopieren und im SQL Editor ausführen.
+4. Die Migration erstellt die Einladungscode- und Registrierungsantragstabellen sowie sichere RPC-Funktionen. Bestehende aktive Mitglieder bleiben aktiv.
+5. Vercel deployt die aktualisierten Dateien nach dem GitHub-Commit automatisch. Prüfe unter Deployments, ob der neueste Commit erfolgreich veröffentlicht wurde.
+6. Mit dem geschützten ADMIN-Konto anmelden und im Adminbereich > Mitgliederverwaltung den Abschnitt „Registrierungen & Einladungscodes“ öffnen.
+7. Einladungscode mit gewünschter Verwendungsanzahl und Gültigkeit erstellen und dem neuen Mitglied privat mitteilen.
+8. Der neue Benutzer registriert sich mit E-Mail, Spielername, Passwort und Einladungscode und bestätigt die E-Mail.
+9. Im ADMIN-Bereich erscheint der Antrag. Erst nach „Freischalten“ wird das Profilstatus-Feld auf active gesetzt und der Mitgliederzugang geöffnet.
+10. Abgelehnte Registrierungen bleiben gesperrt. Codes können im ADMIN-Bereich widerrufen werden.
+
+SICHERHEITSHINWEISE
+- Nur das geschützte Haupt-ADMIN-Konto darf Einladungscodes erstellen, widerrufen und Registrierungen freigeben/ablehnen.
+- Einladungscodes werden in der Datenbank nur als SHA-256-Hash gespeichert und nach erfolgreicher Reservierung gezählt. Der vollständige Code wird im Adminbereich nur einmal angezeigt.
+- Eine Code-Reservierung gilt 24 Stunden, damit die E-Mail-Bestätigung abgeschlossen werden kann.
+- Neue Profile werden nach Registrierung auf pending gesetzt; bestehende aktive Profile werden nicht automatisch deaktiviert.
+- Vor dem produktiven Einsatz bitte die RLS-Regeln der bestehenden Tabellen prüfen und sicherstellen, dass geschützte Daten ausschließlich aktiven Mitgliedern zugänglich sind.
