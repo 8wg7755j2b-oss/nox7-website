@@ -22,18 +22,8 @@ create table if not exists public.nox7_invitation_reservations (
   expires_at timestamptz not null default now() + interval '24 hours'
 );
 
--- Extend the existing profile status domain without changing existing member states.
-do $
-declare c record;
-begin
-  for c in
-    select conname from pg_constraint
-    where conrelid='public.profiles'::regclass and contype='c'
-      and pg_get_constraintdef(oid) ilike '%status%'
-  loop
-    execute format('alter table public.profiles drop constraint %I',c.conname);
-  end loop;
-end $;
+-- Replace the conventional profiles status check, if present, to allow pending/rejected.
+alter table public.profiles drop constraint if exists profiles_status_check;
 alter table public.profiles add constraint profiles_status_check
   check (status in ('active','left','kicked','transferred','pending','rejected'));
 
