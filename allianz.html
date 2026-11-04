@@ -147,6 +147,7 @@ for(let si=0;si<3;si++){
   const portraitWrap=el('div','member-detail-item');portraitWrap.style.cssText='display:flex;align-items:center;justify-content:center;min-height:84px';let currentPortrait=heroPortrait(heroName.value,76);if(currentPortrait)portraitWrap.append(currentPortrait);else portraitWrap.append(el('span','small','Für diesen Helden ist noch kein Porträt hinterlegt.'));heroFields.append(portraitWrap);
   const heroLevel=field(heroFields,'Heldenlevel',source.level??'','number');
   const heroStars=starSelector(heroFields,'Heldensterne',source.stars??'');
+  card.append(heroFields);
   const gearInputs={};
   gearParts.forEach(part=>{
    const gear=source.gear&&source.gear[part]&&typeof source.gear[part]==='object'?source.gear[part]:{};
@@ -163,7 +164,7 @@ for(let si=0;si<3;si++){
   });
   heroName.addEventListener('change',()=>{cardSummary.textContent=(heroName.value||'Held auswählen')+' · Slot '+(hi+1);portraitWrap.replaceChildren();const nextPortrait=heroPortrait(heroName.value,76);if(nextPortrait)portraitWrap.append(nextPortrait);else portraitWrap.append(el('span','small','Für diesen Helden ist noch kein Porträt hinterlegt.'))});
   slots.push({source,heroName,heroLevel,heroStars,gearInputs});
-  card.append(heroFields);squadBox.append(card);
+  squadBox.append(card);
  }
  heroInputs.push(slots);root.append(squadBox);
 }
