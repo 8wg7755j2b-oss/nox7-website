@@ -19,8 +19,23 @@ create table if not exists public.nox7_invitation_reservations (
   email text primary key,
   invitation_id uuid not null references public.nox7_invitation_codes(id) on delete cascade,
   reserved_at timestamptz not null default now(),
-  expires_at timestamptz not null default now() + interval '30 minutes'
+  expires_at timestamptz not null default now() + interval '24 hours'
 );
+
+-- Extend the existing profile status domain without changing existing member states.
+do $
+declare c record;
+begin
+  for c in
+    select conname from pg_constraint
+    where conrelid='public.profiles'::regclass and contype='c'
+      and pg_get_constraintdef(oid) ilike '%status%'
+  loop
+    execute format('alter table public.profiles drop constraint %I',c.conname);
+  end loop;
+end $;
+alter table public.profiles add constraint profiles_status_check
+  check (status in ('active','left','kicked','transferred','pending','rejected'));
 
 create table if not exists public.nox7_registration_requests (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -73,7 +88,7 @@ begin
     return jsonb_build_object('ok',false,'message','Dieser Einladungscode wurde bereits vollständig verwendet.');
   end if;
   insert into public.nox7_invitation_reservations(email,invitation_id,expires_at)
-  values(v_email,v_code.id,now()+interval '30 minutes')
+  values(v_email,v_code.id,now()+interval '24 hours')
   on conflict(email) do update set invitation_id=excluded.invitation_id,reserved_at=now(),expires_at=excluded.expires_at;
   return jsonb_build_object('ok',true,'message','Einladungscode bestätigt.');
 end;
