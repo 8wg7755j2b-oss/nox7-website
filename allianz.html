@@ -77,6 +77,11 @@ function heroSelector(parent,label,value){
 function field(parent,label,value,type='text'){
  const wrap=el('label','member-detail-item');wrap.append(el('span','',label));
  const input=el('input');input.type=type;input.value=value==null?'':String(value);
+ if(type==='number'){
+  input.min='0';input.step='1';
+  input.addEventListener('keydown',event=>{if(event.key==='-'||event.key==='Subtract')event.preventDefault()});
+  input.addEventListener('input',()=>{if(input.value!==''&&Number(input.value)<0)input.value='0'});
+ }
  input.style.cssText='width:100%;margin-top:5px;padding:9px;border-radius:7px;border:1px solid #52647d;background:#0b1727;color:#eef4fc';
  wrap.append(input);parent.append(wrap);return input;
 }
