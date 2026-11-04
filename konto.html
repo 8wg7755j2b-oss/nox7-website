@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>Konto & Allianzen</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#131f31;--line:#2c405b;--text:#edf3fc;--muted:#aab8cb;--accent:#76d9ed;--gold:#e8c77d;--bad:#ffb5c2}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#244263 0,transparent 48%),var(--bg);color:var(--text);font:16px/1.55 system-ui,Segoe UI,Arial,sans-serif}.wrap{width:min(100% - 32px,900px);margin:auto}header{border-bottom:1px solid var(--line);background:#0b1220eF}.nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{font-weight:900;letter-spacing:.12em;font-size:19px}.brand span{color:var(--accent)}a{color:var(--accent)}main{padding:42px 0 70px}.intro{margin-bottom:25px}.eyebrow{font-size:11px;letter-spacing:.2em;color:var(--accent);font-weight:800}.intro h1{font-size:clamp(30px,6vw,46px);line-height:1.08;margin:9px 0}.intro p,.muted{color:var(--muted)}.card{background:linear-gradient(145deg,#17263b,#111b2b);border:1px solid var(--line);border-radius:14px;padding:22px;margin:16px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{margin:10px 0}.field.full{grid-column:1/-1}label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}input{width:100%;background:#0b1422;border:1px solid #3a506d;border-radius:8px;color:var(--text);padding:12px;font:inherit}button,.button{border:1px solid #47758d;background:#17435a;color:white;padding:10px 15px;border-radius:8px;font:inherit;font-weight:750;cursor:pointer;text-decoration:none;display:inline-block}button.secondary,.button.secondary{background:transparent;border-color:#52647d}button:disabled{opacity:.55;cursor:wait}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.notice{padding:12px;border:1px solid #316575;background:#102c39;color:#c4f2fa;border-radius:8px;margin:12px 0;white-space:pre-wrap}.notice.error{border-color:#7b4350;background:#351c28;color:var(--bad)}.profile{display:flex;justify-content:space-between;align-items:center;gap:14px;border:1px solid var(--line);border-radius:10px;padding:15px;margin:10px 0;background:#0d1726}.profile h3{margin:0 0 3px}.status{font-size:12px;color:var(--gold)}.hidden{display:none!important}.small{font-size:12px;color:var(--muted)}footer{border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-size:13px}@media(max-width:620px){.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.profile{align-items:flex-start;flex-direction:column}.card{padding:17px}}
+</style>
+</head>
+<body>
+<header><div class="wrap nav"><div class="brand">ALLIANCE<span>HUB</span></div><a href="index.html">Zur Website</a></div></header>
+<main class="wrap">
+ <div class="intro"><div class="eyebrow">ZENTRALES BENUTZERKONTO</div><h1>Ein Konto. Mehrere Allianzen.</h1><p>Verwalte deine Spielerprofile und wechsle zwischen deinen Allianzen. Jede Allianz hat getrennte Mitglieder, Daten und Berechtigungen.</p></div>
+ <section id="authSection" class="card">
+  <h2>Anmelden oder Konto erstellen</h2>
+  <p class="muted">Für ein neues Konto benötigst du einen Einladungscode deiner ersten Allianz. Bestehende Konten melden sich mit ihrer E-Mail-Adresse an.</p>
+  <div class="grid">
+   <div class="field"><label for="email">E-Mail-Adresse</label><input id="email" type="email" autocomplete="email" placeholder="name@beispiel.at"></div>
+   <div class="field"><label for="password">Passwort</label><input id="password" type="password" autocomplete="current-password" placeholder="Mindestens 8 Zeichen"></div>
+   <div class="field full"><div class="actions"><button id="loginBtn" type="button">Anmelden</button><button id="resetBtn" type="button" class="secondary">Passwort zurücksetzen</button></div></div>
+  </div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+  <h3>Neues Konto erstellen</h3>
+  <div class="grid">
+   <div class="field"><label for="signupName">Spielername im ersten Profil</label><input id="signupName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
+   <div class="field"><label for="inviteCode">Einladungscode der ersten Allianz</label><input id="inviteCode" maxlength="100" autocomplete="off" placeholder="NOX-…"></div>
+   <div class="field"><label for="signupPassword">Passwort</label><input id="signupPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mindestens 8 Zeichen"></div>
+   <div class="field"><label for="signupPassword2">Passwort wiederholen</label><input id="signupPassword2" type="password" minlength="8" autocomplete="new-password" placeholder="Passwort wiederholen"></div>
+   <div class="field full"><button id="signupBtn" type="button">Konto erstellen</button></div>
+  </div>
+  <div id="authMessage" class="notice" role="status" aria-live="polite"></div>
+ </section>
+ <section id="accountSection" class="hidden">
+  <div class="card">
+   <div class="eyebrow">DEIN KONTO</div><div class="profile" style="margin-top:12px"><div><h3 id="accountEmail">—</h3><div class="small">Zentrale Anmeldung</div></div><button id="logoutBtn" class="secondary">Abmelden</button></div>
+   <h2>Meine Allianzprofile</h2><p class="muted">Aktive Profile kannst du auswählen. Offene Beitrittsanfragen werden hier mit ihrem Status angezeigt.</p>
+   <div id="profilesList"></div><div id="selectedContext" class="notice hidden"></div>
+   <div id="profileMessage" class="notice" role="status" aria-live="polite"></div>
+  </div>
+  <div class="card">
+   <div class="eyebrow">WEITERE ALLIANZ</div><h2>Weiteres Spielerprofil hinzufügen</h2>
+   <p class="muted">Gib den Einladungscode einer weiteren Allianz und deinen Spielernamen in dieser Allianz ein. Dein bestehendes Konto bleibt dasselbe.</p>
+   <div class="grid">
+    <div class="field"><label for="joinName">Spielername in der neuen Allianz</label><input id="joinName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
+    <div class="field"><label for="joinCode">Einladungscode</label><input id="joinCode" maxlength="100" placeholder="NOX-…"></div>
+    <div class="field full"><button id="joinBtn" type="button">Beitritt beantragen</button></div>
+   </div>
+  </div>
+ </section>
+ <div id="configMessage" class="notice error hidden"></div>
+</main>
+<footer><div class="wrap">Alliance Hub · Zentrale Kontoverwaltung</div></footer>
+<script>
+(() => {
+ const $ = id => document.getElementById(id);
+ let db = null;
+ let sessionUser = null;
+ let profiles = [];
+ const storageKey = 'allianceHub.selectedProfileId';
+ function message(id,text,isError=false){const el=$(id);el.textContent=text;el.classList.toggle('error',isError);el.classList.remove('hidden')}
+ function setBusy(id,busy){$(id).disabled=busy}
+ function init(){
+  if(!window.NOX7_CONFIG?.url || !window.NOX7_CONFIG?.anonKey || !window.supabase?.createClient){
+   message('configMessage','Die Verbindung zur Kontodatenbank konnte nicht geladen werden. Bitte config.js und die Internetverbindung prüfen.',true);return;
+  }
+  db=window.supabase.createClient(window.NOX7_CONFIG.url,window.NOX7_CONFIG.anonKey);
+  $('loginBtn').addEventListener('click',login);
+  $('resetBtn').addEventListener('click',resetPassword);
+  $('signupBtn').addEventListener('click',signup);
+  $('logoutBtn').addEventListener('click',logout);
+  $('joinBtn').addEventListener('click',requestJoin);
+  db.auth.onAuthStateChange((event,session)=>{
+   sessionUser=session?.user||null;
+   if(sessionUser){$('authSection').classList.add('hidden');$('accountSection').classList.remove('hidden');$('accountEmail').textContent=sessionUser.email||'Angemeldet';setTimeout(loadProfiles,0)}
+   else{$('accountSection').classList.add('hidden');$('authSection').classList.remove('hidden');$('profilesList').replaceChildren();localStorage.removeItem(storageKey)}
+  });
+  db.auth.getSession().then(({data})=>{
+   sessionUser=data.session?.user||null;
+   if(sessionUser){$('authSection').classList.add('hidden');$('accountSection').classList.remove('hidden');$('accountEmail').textContent=sessionUser.email||'Angemeldet';loadProfiles()}
+  });
+ }
+ async function login(){
+  const email=$('email').value.trim(),password=$('password').value;
+  if(!email||!password){message('authMessage','Bitte E-Mail-Adresse und Passwort eingeben.',true);return}
+  setBusy('loginBtn',true);message('authMessage','Anmeldung läuft …');
+  const {error}=await db.auth.signInWithPassword({email,password});
+  setBusy('loginBtn',false);
+  if(error)message('authMessage',error.message,true);
+ }
+ async function resetPassword(){
+  const email=$('email').value.trim();
+  if(!email){message('authMessage','Bitte zuerst deine E-Mail-Adresse eingeben.',true);return}
+  setBusy('resetBtn',true);
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/konto.html'});
+  setBusy('resetBtn',false);
+  message('authMessage',error?error.message:'Falls ein Konto existiert, erhältst du eine E-Mail zum Zurücksetzen des Passworts.',!!error);
+ }
+ async function signup(){
+  const email=$('email').value.trim(),name=$('signupName').value.trim(),code=$('inviteCode').value.trim().toUpperCase(),pw=$('signupPassword').value,pw2=$('signupPassword2').value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){message('authMessage','Bitte eine gültige E-Mail-Adresse eingeben.',true);return}
+  if(name.length<2||name.length>40){message('authMessage','Der Spielername muss 2 bis 40 Zeichen haben.',true);return}
+  if(pw.length<8||pw!==pw2){message('authMessage',pw.length<8?'Das Passwort muss mindestens 8 Zeichen haben.':'Die Passwörter stimmen nicht überein.',true);return}
+  if(!code){message('authMessage','Bitte den Einladungscode deiner ersten Allianz eingeben.',true);return}
+  setBusy('signupBtn',true);message('authMessage','Einladungscode wird geprüft …');
+  try{
+   const reservation=await db.rpc('reserve_alliance_signup',{p_email:email,p_invitation_code:code});
+   if(reservation.error)throw reservation.error;
+   if(!reservation.data?.ok)throw new Error(reservation.data?.message||'Einladung konnte nicht bestätigt werden.');
+   message('authMessage','Einladung bestätigt. Konto wird erstellt …');
+   const result=await db.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+'/konto.html',data:{display_name:name,multi_alliance_signup:true}}});
+   if(result.error)throw result.error;
+   if(result.data.session){
+    sessionUser=result.data.user;$('authSection').classList.add('hidden');$('accountSection').classList.remove('hidden');$('accountEmail').textContent=email;
+    message('profileMessage','Konto erstellt. Dein Beitrittsantrag wurde angelegt und wartet auf Freigabe.');await loadProfiles();
+   }else{
+    message('authMessage','Registrierung angelegt. Bitte bestätige deine E-Mail über den zugesandten Link. Danach kannst du dich hier anmelden.');
+   }
+  }catch(error){message('authMessage',error.message||'Registrierung fehlgeschlagen.',true)}
+  finally{setBusy('signupBtn',false)}
+ }
+ async function loadProfiles(){
+  if(!sessionUser)return;
+  message('profileMessage','Allianzprofile werden geladen …');
+  const {data,error}=await db.rpc('get_my_alliance_profiles_v2');
+  if(error){message('profileMessage','Profile konnten nicht geladen werden: '+error.message,true);return}
+  profiles=data||[];renderProfiles();
+ }
+ function renderProfiles(){
+  const root=$('profilesList');root.replaceChildren();
+  if(!profiles.length){const p=document.createElement('p');p.className='muted';p.textContent='Für dieses Konto wurden noch keine Allianzprofile gefunden.';root.append(p);return}
+  profiles.forEach(p=>{
+   const row=document.createElement('div');row.className='profile';
+   const info=document.createElement('div');const h=document.createElement('h3');h.textContent=p.alliance_name||'Allianz';
+   const detail=document.createElement('div');detail.className='small';detail.textContent=(p.display_name||'Spielerprofil')+' · '+(p.game_rank||'R1')+' · '+p.profile_status;
+   info.append(h,detail);
+   const state=document.createElement('div');state.className='status';state.textContent=p.profile_status==='active'?'Aktiv':p.join_request_status==='pending'?'Freigabe ausständig':p.join_request_status||p.profile_status;
+   row.append(info,state);
+   if(p.is_selectable){const b=document.createElement('button');b.textContent='Dieses Profil verwenden';b.className='secondary';b.addEventListener('click',()=>selectProfile(p.profile_id));row.append(b)}
+   root.append(row);
+  });
+ }
+ async function selectProfile(profileId){
+  message('profileMessage','Profil wird geprüft …');
+  const {data,error}=await db.rpc('get_my_active_alliance_profile_context',{p_profile_id:profileId});
+  if(error||!data?.length){message('profileMessage',error?.message||'Dieses Profil kann nicht ausgewählt werden.',true);return}
+  localStorage.setItem(storageKey,profileId);
+  const p=data[0];
+  message('profileMessage','Aktives Profil: '+p.display_name+' · '+p.alliance_name+'. Allianzbereich wird geöffnet …');
+  location.href='allianz.html';
+  const context=$('selectedContext');context.textContent='Aktuell ausgewählt: '+p.display_name+' – '+p.alliance_name+' · '+p.game_rank+(p.can_manage_alliance?' · Allianzverwaltung möglich':'');context.classList.remove('hidden');
+ }
+ async function requestJoin(){
+  const name=$('joinName').value.trim(),code=$('joinCode').value.trim().toUpperCase();
+  if(name.length<2||name.length>40||!code){message('profileMessage','Bitte einen Spielernamen (2–40 Zeichen) und einen Einladungscode eingeben.',true);return}
+  setBusy('joinBtn',true);message('profileMessage','Beitrittsanfrage wird übermittelt …');
+  const {data,error}=await db.rpc('request_alliance_join',{p_invitation_code:code,p_display_name:name});
+  setBusy('joinBtn',false);
+  if(error){message('profileMessage',error.message,true);return}
+  message('profileMessage',data?.message||'Beitrittsanfrage wurde übermittelt.');
+  $('joinCode').value='';await loadProfiles();
+ }
+ async function logout(){await db.auth.signOut()}
+ init();
+})();
+</script>
+</body>
+</html>
