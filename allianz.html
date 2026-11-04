@@ -52,20 +52,33 @@ const heroCatalogue=[
  {group:'Flugzeug',names:['DVA','Morrison','Schuyler','Carlie','Lucius','Sarah','Cage','Maxwell','Ambolt']},
  {group:'Rakete',names:['Tesla','Fiona','Swift','Adam','McGregor','Venom','Braz','Elsa','Kane']}
 ];
-function starSelector(parent,label,value){
- const wrap=el('label','member-detail-item');wrap.append(el('span','',label));
- const select=document.createElement('select');
- select.style.cssText='width:100%;margin-top:5px;padding:9px;border-radius:7px;border:1px solid #52647d;background:#0b1727;color:#eef4fc';
- const empty=document.createElement('option');empty.value='';empty.textContent='— Sterne auswählen —';select.append(empty);
- for(let n=0;n<=5;n++){
-  const option=document.createElement('option');option.value=String(n);option.textContent=n+' '+(n===1?'Stern':'Sterne');
-  if(String(value??'')===String(n))option.selected=true;
-  select.append(option);
+function starSelector(parent,label,value,redFifth=false){
+ const wrap=el('div','member-detail-item');wrap.append(el('span','',label));
+ const input=el('input');input.type='hidden';input.value=value==null||value===''?'':String(value);
+ const row=el('div','');row.style.cssText='display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:6px';
+ const buttons=[];
+ const count=el('span','small');count.style.marginLeft='5px';
+ function paint(){
+  const current=input.value===''?0:Number(input.value);
+  buttons.forEach((button,index)=>{
+   const active=index+1<=current;
+   button.textContent=active?'★':'☆';
+   button.style.color=redFifth&&index===4?(active?'#ff4545':'#c65b64'):(active?'#f5c84c':'#9aa9bd');
+   button.style.background=active?'#3b321b':'#142238';
+   button.style.borderColor=redFifth&&index===4?'#b84b55':(active?'#a88632':'#52647d');
+   button.setAttribute('aria-pressed',active?'true':'false');
+  });
+  count.textContent=input.value===''?'Keine Auswahl':input.value+' von 5 Sternen';
  }
- if(value!==null&&value!==undefined&&value!==''&&!Array.from(select.options).some(o=>o.value===String(value))){
-  const option=document.createElement('option');option.value=String(value);option.textContent=String(value)+' Sterne (gespeicherter Wert)';option.selected=true;select.append(option);
+ for(let n=1;n<=5;n++){
+  const button=el('button');button.type='button';button.title=n+' Sterne';button.setAttribute('aria-label',n+' Sterne auswählen');
+  button.style.cssText='padding:5px 8px;font-size:23px;line-height:1;border:1px solid #52647d;border-radius:7px;cursor:pointer';
+  button.onclick=()=>{input.value=String(n);paint()};
+  buttons.push(button);row.append(button);
  }
- wrap.append(select);parent.append(wrap);return select;
+ const clear=el('button','secondary','Zurücksetzen');clear.type='button';clear.style.cssText='padding:5px 8px;font-size:12px';
+ clear.onclick=()=>{input.value='';paint()};
+ row.append(count,clear);wrap.append(row,input);parent.append(wrap);paint();return input;
 }
 function heroSelector(parent,label,value){
  const wrap=el('label','member-detail-item');wrap.append(el('span','',label));
@@ -132,7 +145,7 @@ for(let si=0;si<3;si++){
    const heading=el('div','small','Ausrüstung: '+part);heading.style.marginTop='8px';card.append(heading);
    gearInputs[part]={
     level:field(card,part+' Level',gear.level??'','number'),
-    stars:field(card,part+' Sterne',gear.stars??'','number')
+    stars:starSelector(card,part+' Sterne',gear.stars??'',part==='Waffe')
    };
   });
   slots.push({source,heroName,heroLevel,heroStars,gearInputs});
