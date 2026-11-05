@@ -120,7 +120,12 @@ const power=field(form,'Gesamtkampfkraft',p.power,'number');
 const squad=[];
 for(let i=1;i<=3;i++){
  const sq=field(form,'Squad '+i+' Kampfkraft',p['squad'+i+'_power'],'number');
- const typ=field(form,'Squad '+i+' Typ',p['squad'+i+'_type']||'');
+ const typeWrap=el('label','member-detail-item');typeWrap.append(el('span','','Squad '+i+' Typ'));
+ const typ=document.createElement('select');
+ typ.style.cssText='width:100%;margin-top:5px;padding:9px;border-radius:7px;border:1px solid #52647d;background:#0b1727;color:#eef4fc';
+ [['','— Typ auswählen —'],['Panzer','Panzer'],['Rakete','Rakete'],['Flugzeug','Flugzeug'],['Mix','Mix']].forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;typ.append(option)});
+ typ.value=p['squad'+i+'_type']||'';
+ typeWrap.append(typ);form.append(typeWrap);
  squad.push({power:sq,type:typ});
 }
 root.append(form);
