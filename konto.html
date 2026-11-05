@@ -18,7 +18,7 @@
  <div class="intro"><div class="eyebrow">ZENTRALES BENUTZERKONTO</div><h1>Ein Konto. Mehrere Allianzen.</h1><p>Verwalte deine Spielerprofile und wechsle zwischen deinen Allianzen. Jede Allianz hat getrennte Mitglieder, Daten und Berechtigungen.</p></div>
  <section id="authSection" class="card">
   <h2>Anmelden oder Konto erstellen</h2>
-  <p class="muted">Für ein neues Konto benötigst du einen Einladungscode deiner ersten Allianz. Bestehende Konten melden sich mit ihrer E-Mail-Adresse an.</p>
+  <p class="muted">Erstelle zuerst dein persönliches Konto. Eine Allianz kannst du danach jederzeit gründen oder einer bestehenden Allianz beitreten.</p>
   <div class="grid">
    <div class="field"><label for="email">E-Mail-Adresse</label><input id="email" type="email" autocomplete="email" placeholder="name@beispiel.at"></div>
    <div class="field"><label for="password">Passwort</label><input id="password" type="password" autocomplete="current-password" placeholder="Mindestens 8 Zeichen"></div>
@@ -27,11 +27,9 @@
   <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
   <h3>Neues Konto erstellen</h3>
   <div class="grid">
-   <div class="field"><label for="signupName">Spielername im ersten Profil</label><input id="signupName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
-   <div class="field"><label for="inviteCode">Einladungscode der ersten Allianz</label><input id="inviteCode" maxlength="100" autocomplete="off" placeholder="NOX-…"></div>
    <div class="field"><label for="signupPassword">Passwort</label><input id="signupPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mindestens 8 Zeichen"></div>
    <div class="field"><label for="signupPassword2">Passwort wiederholen</label><input id="signupPassword2" type="password" minlength="8" autocomplete="new-password" placeholder="Passwort wiederholen"></div>
-   <div class="field full"><button id="signupBtn" type="button">Konto erstellen</button></div>
+   <div class="field full"><button id="signupBtn" type="button">Kostenloses Konto erstellen</button></div>
   </div>
   <div id="authMessage" class="notice" role="status" aria-live="polite"></div>
  </section>
@@ -43,13 +41,24 @@
    <div id="profileMessage" class="notice" role="status" aria-live="polite"></div>
   </div>
   <div class="card">
-   <div class="eyebrow">WEITERE ALLIANZ</div><h2>Weiteres Spielerprofil hinzufügen</h2>
-   <p class="muted">Gib den Einladungscode einer weiteren Allianz und deinen Spielernamen in dieser Allianz ein. Dein bestehendes Konto bleibt dasselbe.</p>
+   <div class="eyebrow">NEUE ALLIANZ</div><h2>Eigene Allianz gründen</h2>
+   <p class="muted">Erstelle eine neue Allianz. Du wirst automatisch ihr R5 und erster Administrator.</p>
    <div class="grid">
-    <div class="field"><label for="joinName">Spielername in der neuen Allianz</label><input id="joinName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
-    <div class="field"><label for="joinCode">Einladungscode</label><input id="joinCode" maxlength="100" placeholder="NOX-…"></div>
-    <div class="field full"><button id="joinBtn" type="button">Beitritt beantragen</button></div>
+    <div class="field"><label for="createAllianceName">Allianzname</label><input id="createAllianceName" maxlength="80" placeholder="Name deiner Allianz"></div>
+    <div class="field"><label for="createAllianceSlug">Allianz-Kürzel / URL</label><input id="createAllianceSlug" maxlength="40" placeholder="z. B. nox7-team"></div>
+    <div class="field full"><label for="createPlayerName">Dein Spielername in dieser Allianz</label><input id="createPlayerName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
+    <div class="field full"><button id="createAllianceBtn" type="button">Allianz gründen</button></div>
    </div>
+  </div>
+  <div class="card">
+   <div class="eyebrow">ALLIANZ FINDEN</div><h2>Bestehender Allianz beitreten</h2>
+   <p class="muted">Suche eine freigeschaltete Allianz und sende eine Beitrittsanfrage. Die Allianzführung muss deinen Antrag bestätigen.</p>
+   <div class="grid">
+    <div class="field"><label for="allianceSearch">Allianz suchen</label><input id="allianceSearch" maxlength="80" placeholder="Allianzname oder Kürzel"></div>
+    <div class="field"><label for="joinName">Dein Spielername in dieser Allianz</label><input id="joinName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
+    <div class="field full"><button id="searchAlliancesBtn" class="secondary" type="button">Allianzen suchen</button></div>
+   </div>
+   <div id="allianceResults"></div>
   </div>
   <div class="card">
    <div class="eyebrow">KONTO-SICHERHEIT</div><h2>Konto löschen</h2>
@@ -151,7 +160,10 @@
   $('resetBtn').addEventListener('click',resetPassword);
   $('signupBtn').addEventListener('click',signup);
   $('logoutBtn').addEventListener('click',logout);
-  $('joinBtn').addEventListener('click',requestJoin);
+  $('createAllianceBtn').addEventListener('click',createAlliance);
+  $('searchAlliancesBtn').addEventListener('click',searchAlliances);
+  $('createAllianceName').addEventListener('input',()=>{if(!$('createAllianceSlug').dataset.edited)$('createAllianceSlug').value=slugify($('createAllianceName').value)});
+  $('createAllianceSlug').addEventListener('input',()=>{$('createAllianceSlug').dataset.edited='true';$('createAllianceSlug').value=slugify($('createAllianceSlug').value)});
   $('deleteAccountBtn').addEventListener('click',requestAccountDeletion);
 
   // Jede authentifizierte Sitzung wird zentral serverseitig geprüft.
@@ -193,51 +205,16 @@
  }
 
  async function signup(){
-  const email=$('email').value.trim(),name=$('signupName').value.trim(),code=$('inviteCode').value.trim().toUpperCase(),pw=$('signupPassword').value,pw2=$('signupPassword2').value;
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-   message('authMessage','Bitte eine gültige E-Mail-Adresse eingeben.',true);
-   return;
-  }
-  if(name.length<2||name.length>40){
-   message('authMessage','Der Spielername muss 2 bis 40 Zeichen haben.',true);
-   return;
-  }
-  if(pw.length<8||pw!==pw2){
-   message('authMessage',pw.length<8?'Das Passwort muss mindestens 8 Zeichen haben.':'Die Passwörter stimmen nicht überein.',true);
-   return;
-  }
-  if(!code){
-   message('authMessage','Bitte den Einladungscode deiner ersten Allianz eingeben.',true);
-   return;
-  }
-
-  setBusy('signupBtn',true);
-  message('authMessage','Einladungscode wird geprüft …');
+  const email=$('email').value.trim(),pw=$('signupPassword').value,pw2=$('signupPassword2').value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){message('authMessage','Bitte eine gültige E-Mail-Adresse eingeben.',true);return;}
+  if(pw.length<8||pw!==pw2){message('authMessage',pw.length<8?'Das Passwort muss mindestens 8 Zeichen haben.':'Die Passwörter stimmen nicht überein.',true);return;}
+  setBusy('signupBtn',true);message('authMessage','Konto wird erstellt …');
   try{
-   const reservation=await db.rpc('reserve_alliance_signup',{p_email:email,p_invitation_code:code});
-   if(reservation.error)throw reservation.error;
-   if(!reservation.data?.ok)throw new Error(reservation.data?.message||'Einladung konnte nicht bestätigt werden.');
-
-   message('authMessage','Einladung bestätigt. Konto wird erstellt …');
-   const result=await db.auth.signUp({
-    email,
-    password:pw,
-    options:{
-     emailRedirectTo:location.origin+'/konto.html',
-     data:{display_name:name,multi_alliance_signup:true}
-    }
-   });
+   const result=await db.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+'/konto.html',data:{account_only_signup:true}}});
    if(result.error)throw result.error;
-
-   if(!result.data.session){
-    message('authMessage','Registrierung angelegt. Bitte bestätige deine E-Mail über den zugesandten Link. Danach kannst du dich hier anmelden.');
-   }
-   // Wenn Supabase eine Sitzung liefert, übernimmt der zentrale Auth-Listener die Prüfung.
-  }catch(error){
-   message('authMessage',error.message||'Registrierung fehlgeschlagen.',true);
-  }finally{
-   setBusy('signupBtn',false);
-  }
+   if(!result.data.session)message('authMessage','Registrierung angelegt. Bitte bestätige deine E-Mail über den zugesandten Link. Danach kannst du dich anmelden.');
+  }catch(error){message('authMessage',error.message||'Registrierung fehlgeschlagen.',true);}
+  finally{setBusy('signupBtn',false);}
  }
 
  async function loadProfiles(){
@@ -316,23 +293,40 @@
   await db.auth.signOut();
  }
 
- async function requestJoin(){
-  const name=$('joinName').value.trim(),code=$('joinCode').value.trim().toUpperCase();
-  if(name.length<2||name.length>40||!code){
-   message('profileMessage','Bitte einen Spielernamen (2–40 Zeichen) und einen Einladungscode eingeben.',true);
-   return;
-  }
-  setBusy('joinBtn',true);
-  message('profileMessage','Beitrittsanfrage wird übermittelt …');
-  const {data,error}=await db.rpc('request_alliance_join',{p_invitation_code:code,p_display_name:name});
-  setBusy('joinBtn',false);
-  if(error){
-   message('profileMessage',error.message,true);
-   return;
-  }
-  message('profileMessage',data?.message||'Beitrittsanfrage wurde übermittelt.');
-  $('joinCode').value='';
-  await loadProfiles();
+ function slugify(value){
+  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40).replace(/-+$/,'');
+ }
+ async function createAlliance(){
+  const name=$('createAllianceName').value.trim(),slug=slugify($('createAllianceSlug').value),displayName=$('createPlayerName').value.trim();
+  if(name.length<2||name.length>80||slug.length<3||slug.length>40||displayName.length<2||displayName.length>40){message('profileMessage','Bitte Allianzname (2–80), gültiges Kürzel (3–40) und Spielernamen (2–40 Zeichen) eingeben.',true);return;}
+  setBusy('createAllianceBtn',true);message('profileMessage','Allianz wird erstellt …');
+  const {data,error}=await db.rpc('create_alliance_for_account',{p_name:name,p_slug:slug,p_display_name:displayName});
+  setBusy('createAllianceBtn',false);
+  if(error){message('profileMessage','Allianz konnte nicht erstellt werden: '+error.message,true);return;}
+  message('profileMessage','Allianz erfolgreich gegründet. Du bist R5. Allianzbereich wird geöffnet …');
+  await loadProfiles();if(data?.length)await selectProfile(data[0].profile_id);
+ }
+ async function searchAlliances(){
+  setBusy('searchAlliancesBtn',true);
+  const {data,error}=await db.rpc('search_alliances',{p_search:$('allianceSearch').value.trim()||null});
+  setBusy('searchAlliancesBtn',false);
+  const root=$('allianceResults');root.replaceChildren();
+  if(error){message('profileMessage','Allianzen konnten nicht gesucht werden: '+error.message,true);return;}
+  if(!data?.length){const p=document.createElement('p');p.className='muted';p.textContent='Keine freigeschalteten Allianzen gefunden.';root.append(p);return;}
+  data.forEach(a=>{
+   const row=document.createElement('div');row.className='profile';
+   const info=document.createElement('div'),h=document.createElement('h3'),detail=document.createElement('div');
+   h.textContent=a.alliance_name;detail.className='small';detail.textContent=a.alliance_slug+' · '+a.active_members+' aktive Mitglieder';info.append(h,detail);
+   const btn=document.createElement('button');btn.textContent='Beitritt beantragen';btn.addEventListener('click',()=>requestJoinById(a.alliance_id,a.alliance_name));
+   row.append(info,btn);root.append(row);
+  });
+ }
+ async function requestJoinById(allianceId,allianceName){
+  const name=$('joinName').value.trim();if(name.length<2||name.length>40){message('profileMessage','Bitte zuerst deinen Spielernamen (2–40 Zeichen) eingeben.',true);return;}
+  message('profileMessage','Beitrittsanfrage für '+allianceName+' wird übermittelt …');
+  const {data,error}=await db.rpc('request_alliance_join_by_id',{p_alliance_id:allianceId,p_display_name:name});
+  if(error){message('profileMessage','Beitrittsanfrage fehlgeschlagen: '+error.message,true);return;}
+  message('profileMessage',data?.message||'Beitrittsanfrage wurde übermittelt.');await loadProfiles();
  }
 
  async function logout(){
