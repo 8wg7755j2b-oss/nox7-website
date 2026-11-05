@@ -18,15 +18,16 @@
  <div class="intro"><div class="eyebrow">ZENTRALES BENUTZERKONTO</div><h1>Ein Konto. Mehrere Allianzen.</h1><p>Verwalte deine Spielerprofile und wechsle zwischen deinen Allianzen. Jede Allianz hat getrennte Mitglieder, Daten und Berechtigungen.</p></div>
  <section id="authSection" class="card">
   <h2>Anmelden oder Konto erstellen</h2>
-  <p class="muted">Erstelle zuerst dein persönliches Konto. Eine Allianz kannst du danach jederzeit gründen oder einer bestehenden Allianz beitreten.</p>
+  <p class="muted">Erstelle dein persönliches Konto nur mit Benutzername und Passwort – ohne E-Mail-Adresse und ohne Einladungscode. Eine Allianz kannst du danach jederzeit gründen oder einer bestehenden Allianz beitreten.</p>
   <div class="grid">
-   <div class="field"><label for="email">E-Mail-Adresse</label><input id="email" type="email" autocomplete="email" placeholder="name@beispiel.at"></div>
+   <div class="field"><label for="email">Benutzername</label><input id="email" type="text" autocomplete="username" maxlength="24" placeholder="Dein Benutzername"></div>
    <div class="field"><label for="password">Passwort</label><input id="password" type="password" autocomplete="current-password" placeholder="Mindestens 8 Zeichen"></div>
-   <div class="field full"><div class="actions"><button id="loginBtn" type="button">Anmelden</button><button id="resetBtn" type="button" class="secondary">Passwort zurücksetzen</button></div></div>
+   <div class="field full"><div class="actions"><button id="loginBtn" type="button">Anmelden</button></div></div>
   </div>
   <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
   <h3>Neues Konto erstellen</h3>
   <div class="grid">
+   <div class="field full"><label for="signupUsername">Benutzername</label><input id="signupUsername" type="text" minlength="3" maxlength="24" autocomplete="username" placeholder="3 bis 24 Zeichen: Buchstaben, Zahlen, Punkt oder Unterstrich"></div>
    <div class="field"><label for="signupPassword">Passwort</label><input id="signupPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mindestens 8 Zeichen"></div>
    <div class="field"><label for="signupPassword2">Passwort wiederholen</label><input id="signupPassword2" type="password" minlength="8" autocomplete="new-password" placeholder="Passwort wiederholen"></div>
    <div class="field full"><button id="signupBtn" type="button">Kostenloses Konto erstellen</button></div>
@@ -35,7 +36,7 @@
  </section>
  <section id="accountSection" class="hidden">
   <div class="card">
-   <div class="eyebrow">DEIN KONTO</div><div class="profile" style="margin-top:12px"><div><h3 id="accountEmail">—</h3><div class="small">Zentrale Anmeldung</div></div><div class="actions"><a id="platformAdminLink" class="button hidden" href="plattform-admin.html">Plattform-Admin</a><button id="logoutBtn" class="secondary">Abmelden</button></div></div>
+   <div class="eyebrow">DEIN KONTO</div><div class="profile" style="margin-top:12px"><div><h3 id="accountEmail">—</h3><div class="small">Zentrale Anmeldung · Ohne E-Mail</div></div><div class="actions"><a id="platformAdminLink" class="button hidden" href="plattform-admin.html">Plattform-Admin</a><button id="logoutBtn" class="secondary">Abmelden</button></div></div>
    <h2>Meine Allianzprofile</h2><p class="muted">Aktive Profile kannst du auswählen. Offene Beitrittsanfragen werden hier mit ihrem Status angezeigt.</p>
    <div id="profilesList"></div><div id="selectedContext" class="notice hidden"></div>
    <div id="profileMessage" class="notice" role="status" aria-live="polite"></div>
@@ -138,7 +139,7 @@
 
   $('authSection').classList.add('hidden');
   $('accountSection').classList.remove('hidden');
-  $('accountEmail').textContent=user.email||'Angemeldet';
+  $('accountEmail').textContent=user.user_metadata?.username||user.email||'Angemeldet';
   updatePlatformAdminLink();
 
   if(deletion?.cancelled){
@@ -157,7 +158,6 @@
   db=window.supabase.createClient(window.NOX7_CONFIG.url,window.NOX7_CONFIG.anonKey);
 
   $('loginBtn').addEventListener('click',login);
-  $('resetBtn').addEventListener('click',resetPassword);
   $('signupBtn').addEventListener('click',signup);
   $('logoutBtn').addEventListener('click',logout);
   $('createAllianceBtn').addEventListener('click',createAlliance);
@@ -178,41 +178,36 @@
   });
  }
 
+ function authEmailFromUsername(value){
+  const v=value.trim().toLowerCase();
+  return v.includes('@')?v:(v+'@nox7.invalid');
+ }
+
  async function login(){
-  const email=$('email').value.trim(),password=$('password').value;
-  if(!email||!password){
-   message('authMessage','Bitte E-Mail-Adresse und Passwort eingeben.',true);
+  const username=$('email').value.trim(),password=$('password').value;
+  if(!username||!password){
+   message('authMessage','Bitte Benutzername und Passwort eingeben.',true);
    return;
   }
   setBusy('loginBtn',true);
   message('authMessage','Anmeldung läuft …');
-  const {error}=await db.auth.signInWithPassword({email,password});
+  const {error}=await db.auth.signInWithPassword({email:authEmailFromUsername(username),password});
   setBusy('loginBtn',false);
   if(error)message('authMessage',error.message,true);
   // Die zentrale Sitzungsprüfung übernimmt die weitere Verarbeitung.
  }
 
- async function resetPassword(){
-  const email=$('email').value.trim();
-  if(!email){
-   message('authMessage','Bitte zuerst deine E-Mail-Adresse eingeben.',true);
-   return;
-  }
-  setBusy('resetBtn',true);
-  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/konto.html'});
-  setBusy('resetBtn',false);
-  message('authMessage',error?error.message:'Falls ein Konto existiert, erhältst du eine E-Mail zum Zurücksetzen des Passworts.',!!error);
- }
-
  async function signup(){
-  const email=$('email').value.trim(),pw=$('signupPassword').value,pw2=$('signupPassword2').value;
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){message('authMessage','Bitte eine gültige E-Mail-Adresse eingeben.',true);return;}
+  const username=$('signupUsername').value.trim().toLowerCase(),pw=$('signupPassword').value,pw2=$('signupPassword2').value;
+  if(!/^[a-z0-9._]{3,24}$/.test(username)){message('authMessage','Der Benutzername muss 3 bis 24 Zeichen haben und darf nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich enthalten.',true);return;}
   if(pw.length<8||pw!==pw2){message('authMessage',pw.length<8?'Das Passwort muss mindestens 8 Zeichen haben.':'Die Passwörter stimmen nicht überein.',true);return;}
   setBusy('signupBtn',true);message('authMessage','Konto wird erstellt …');
   try{
-   const result=await db.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+'/konto.html',data:{account_only_signup:true}}});
+   const email=authEmailFromUsername(username);
+   const result=await db.auth.signUp({email,password:pw,options:{data:{account_only_signup:true,username,display_name:username}}});
    if(result.error)throw result.error;
-   if(!result.data.session)message('authMessage','Registrierung angelegt. Bitte bestätige deine E-Mail über den zugesandten Link. Danach kannst du dich anmelden.');
+   if(!result.data.session)throw new Error('Das Konto wurde angelegt, aber die Anmeldung ist noch nicht freigeschaltet. In Supabase muss die E-Mail-Bestätigung deaktiviert werden.');
+   message('authMessage','Konto erfolgreich erstellt. Du bist angemeldet und kannst jetzt eine Allianz gründen oder einer beitreten.');
   }catch(error){message('authMessage',error.message||'Registrierung fehlgeschlagen.',true);}
   finally{setBusy('signupBtn',false);}
  }
