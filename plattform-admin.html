@@ -56,7 +56,7 @@ function renderRequests(){
  $('requestRows').innerHTML=requests.filter(r=>f==='all'||r.request_status===f).map(r=>'<tr><td>'+esc(r.display_name)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.alliance_name)+'</td><td>'+date(r.requested_at)+'</td><td>'+esc(r.request_status)+'</td><td>'+(r.request_status==='pending'?'<div class="actions"><button data-review="'+r.request_id+'" data-approve="true">Genehmigen</button><button class="danger" data-review="'+r.request_id+'" data-approve="false">Ablehnen</button></div>':'–')+'</td></tr>').join('')||'<tr><td colspan="6">Keine Anfragen.</td></tr>';
 }
 function renderInvites(){
- $('inviteRows').innerHTML=invites.map(i=>'<tr><td>'+esc(i.alliance_name)+'</td><td>'+date(i.created_at)+'</td><td>'+date(i.expires_at)+'</td><td>'+i.uses_count+' / '+i.max_uses+'</td><td>'+(i.revoked_at?'Widerrufen':i.uses_count>=i.max_uses?'Aufgebraucht':'Aktiv')+'</td><td>'+(!i.revoked_at?'<button class="danger" data-revoke-invite="'+i.invitation_id+'">Widerrufen</button>':'–')+'</td></tr>').join('')||'<tr><td colspan="6">Keine Einladungscodes.</td></tr>';
+ $('inviteRows').innerHTML=invites.map(i=>'<tr><td>'+esc(i.alliance_name)+'</td><td>'+date(i.created_at)+'</td><td>'+date(i.expires_at)+'</td><td>'+i.uses_count+' / '+i.max_uses+'</td><td>'+(i.revoked_at?'Widerrufen':i.uses_count>=i.max_uses?'Aufgebraucht':'Aktiv')+'</td><td><div class="actions">'+(!i.revoked_at?'<button class="danger" data-revoke-invite="'+i.invitation_id+'">Widerrufen</button>':'')+'<button class="danger" data-delete-invite="'+i.invitation_id+'">Löschen</button></div></td></tr>').join('')||'<tr><td colspan="6">Keine Einladungscodes.</td></tr>';
 }
 function renderDeletions(){
  $('deletionRows').innerHTML=deletions.map(x=>{
@@ -90,7 +90,8 @@ document.addEventListener('click',e=>{
  if(b.dataset.lockProfile){const id=b.dataset.lockProfile,p=profiles.find(x=>x.profile_id===id);if(!confirm(p.platform_locked?'Konto-Sperre aufheben?':'Dieses Spielerprofil für die Plattform sperren?'))return;act(()=>rpc('platform_admin_set_profile',{p_profile_id:id,p_rank:p.game_rank,p_locked:!p.platform_locked}));}
  if(b.dataset.transferProfile){const email=prompt('E-Mail des bestehenden Zielkontos:');if(!email)return;if(!confirm('Spielerprofil an '+email+' übertragen?'))return;act(()=>rpc('platform_admin_transfer_profile',{p_profile_id:b.dataset.transferProfile,p_new_owner_email:email}));}
  if(b.dataset.review){const yes=b.dataset.approve==='true';if(!confirm(yes?'Beitrittsanfrage genehmigen?':'Beitrittsanfrage ablehnen?'))return;const note=prompt('Optionale interne Notiz:')||null;act(()=>rpc('platform_admin_review_request',{p_request_id:b.dataset.review,p_approve:yes,p_note:note}));}
- if(b.dataset.revokeInvite){if(!confirm('Einladungscode unwiderruflich für weitere Nutzung sperren?'))return;act(()=>rpc('platform_admin_revoke_invite',{p_invitation_id:b.dataset.revokeInvite}));}
+ if(b.dataset.revokeInvite){if(!confirm('Einladungscode für weitere Nutzung sperren?'))return;act(()=>rpc('platform_admin_revoke_invite',{p_invitation_id:b.dataset.revokeInvite}));}
+ if(b.dataset.deleteInvite){if(!confirm('Einladungscode wirklich endgültig löschen? Codes mit vorhandenen Beitrittsanfragen können aus Gründen der Nachvollziehbarkeit nicht gelöscht werden.'))return;act(()=>rpc('platform_admin_delete_invite',{p_invitation_id:b.dataset.deleteInvite}));}
  if(b.dataset.testDeletion){
   const item=deletions.find(x=>x.user_id===b.dataset.testDeletion);
   if(!item)return;
