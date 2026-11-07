@@ -303,7 +303,7 @@
   if(!/^[a-z0-9._]{3,24}$/.test(username)){
    message('accountDataMessage','Der Benutzername muss 3 bis 24 Zeichen haben und darf nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich enthalten.',true);return;
   }
-  if(contactEmail && !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(contactEmail)){
+  if(contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)){
    message('accountDataMessage','Bitte eine gültige Kontakt-E-Mail-Adresse eingeben.',true);return;
   }
   if(!currentPassword){
