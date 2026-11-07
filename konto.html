@@ -213,13 +213,22 @@
   try{
    let loginEmail=authEmailFromUsername(identifier);
    if(identifier.includes('@') && !identifier.toLowerCase().endsWith('@nox7.invalid')){
-    const {data,error}=await db.rpc('account_resolve_contact_login',{p_contact_email:identifier.toLowerCase()});
-    if(error)throw error;
-    if(!data)throw new Error('Mit dieser Kontakt-E-Mail-Adresse wurde kein Konto gefunden.');
-    loginEmail=data;
+    const {data}=await db.rpc('account_resolve_contact_login',{p_contact_email:identifier.toLowerCase()});
+    if(data){
+     loginEmail=data;
+    }else{
+     // Fallback für Konten, die mit einer echten Auth-E-Mail-Adresse angelegt wurden
+     // oder bei denen noch keine Kontakt-E-Mail hinterlegt ist.
+     loginEmail=identifier.toLowerCase();
+    }
    }
    const {error}=await db.auth.signInWithPassword({email:loginEmail,password});
-   if(error)throw error;
+   if(error){
+    if(identifier.includes('@') && !identifier.toLowerCase().endsWith('@nox7.invalid')){
+     throw new Error('Anmeldung fehlgeschlagen. Prüfe die Kontakt-E-Mail-Adresse und das Passwort. Falls du noch keine Kontakt-E-Mail gespeichert hast, verwende bitte deinen Benutzernamen.');
+    }
+    throw error;
+   }
   }catch(error){
    message('authMessage',error.message||'Anmeldung fehlgeschlagen.',true);
   }finally{
