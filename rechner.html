@@ -14,7 +14,7 @@
 <article class="card wide"><h2>Gebäude-Upgrade planen</h2><p class="small">Trage die Kosten des gewünschten Upgrades und deinen aktuellen Lagerbestand ein. Der Rechner ermittelt Fehlmengen und den Gesamtbedarf. Die Kostenwerte kommen aus deinem Spiel bzw. einer geprüften Datenbank – sie werden bewusst nicht geraten.</p>
 <div class="fields"><div class="field"><label for="buildingName">Gebäude</label><select id="buildingName"><option>Hauptquartier (HQ)</option><option>Forschungszentrum</option><option>Kaserne</option><option>Panzerzentrum</option><option>Flugzeugzentrum</option><option>Raketenwerferzentrum</option><option>Krankenhaus</option><option>Andere Gebäude</option></select></div><div class="field"><label for="buildingLevel">Ziel-Level</label><input id="buildingLevel" type="number" min="1" max="35" value="30"></div></div>
 <h3>Upgrade-Kosten</h3><div class="resource-grid">
-<div class="field"><label for="needFood">Benötigte Nahrung</label><input id="needFood" type="number" min="0" value="0"></div><div class="field"><label for="needIron">Benötigtes Eisen</label><input id="needIron" type="number" min="0" value="0"></div><div class="field"><label for="needGold">Benötigtes Gold</label><input id="needGold" type="number" min="0" value="0"></div><div class="field"><label for="haveFood">Nahrung auf Lager</label><input id="haveFood" type="number" min="0" value="0"></div><div class="field"><label for="haveIron">Eisen auf Lager</label><input id="haveIron" type="number" min="0" value="0"></div><div class="field"><label for="haveGold">Gold auf Lager</label><input id="haveGold" type="number" min="0" value="0"></div></div>
+<div class="field"><label for="needFood">Benötigte Nahrung</label><input id="needFood" type="number" min="0" value="0"></div><div class="field"><label for="needIron">Benötigtes Eisen</label><input id="needIron" type="number" min="0" value="0"></div><div class="field"><label for="needGold">Benötigtes Gold</label><input id="needGold" type="number" min="0" value="0"></div><div class="field"><label for="needOil">Benötigtes Öl</label><input id="needOil" type="number" min="0" value="0"></div><div class="field"><label for="haveFood">Nahrung auf Lager</label><input id="haveFood" type="number" min="0" value="0"></div><div class="field"><label for="haveIron">Eisen auf Lager</label><input id="haveIron" type="number" min="0" value="0"></div><div class="field"><label for="haveGold">Gold auf Lager</label><input id="haveGold" type="number" min="0" value="0"></div><div class="field"><label for="haveOil">Öl auf Lager</label><input id="haveOil" type="number" min="0" value="0"></div></div>
 <div class="result" id="resourceResult" aria-live="polite">Werte eintragen, um Fehlmengen zu berechnen.</div></article>
 <article class="card"><h2>HQ-Voraussetzungen</h2><p>Vor dem HQ-Ausbau müssen je nach Ziel-Level bestimmte Gebäude und Forschungsstufen erfüllt sein. Prüfe die exakten Voraussetzungen für dein Level in der Gebäudedatenbank.</p><p class="small">Tipp: Plane zuerst die Pflichtgebäude, danach Ressourcen und Bauzeit. Voraussetzungen und Kosten können durch Spielupdates angepasst werden.</p><a class="btn secondary" href="https://lastwarvault.com/buildings/" target="_blank" rel="noopener">Gebäude-Datenbank öffnen ↗</a></article>
 <article class="card"><h2>Ressourcen-Check</h2><p>Der Rechner zeigt pro Ressource, wie viel noch fehlt. Für mehrere aufeinanderfolgende Ausbaustufen kannst du die Kosten der einzelnen Schritte addieren und als Gesamtsumme eintragen.</p><div class="small">Einheiten bitte so übernehmen, wie sie im Spiel oder in der Datenquelle angezeigt werden.</div></article>
@@ -45,43 +45,43 @@ function tab(name){document.querySelectorAll('.panel').forEach(p=>p.hidden=p.id!
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 function n(id){const v=Number($(id).value);return Number.isFinite(v)&&v>0?v:0}
 function fmt(v){return Math.ceil(v).toLocaleString('de-AT')}
-function resources(){const items=[['Nahrung','needFood','haveFood'],['Eisen','needIron','haveIron'],['Gold','needGold','haveGold']];const lines=items.map(([name,need,have])=>{const required=n(need),stock=n(have),missing=Math.max(0,required-stock);return '<div>'+name+': <strong>'+fmt(missing)+'</strong> fehlen <span class="small">('+fmt(stock)+' / '+fmt(required)+')</span></div>'});const ok=items.every(([,a,b])=>n(b)>=n(a));$('resourceResult').innerHTML='<strong>'+(ok?'Upgrade-Ressourcen vorhanden':'Noch nicht genug Ressourcen')+'</strong>'+lines.join('')}
+function resources(){const items=[['Nahrung','needFood','haveFood'],['Eisen','needIron','haveIron'],['Gold','needGold','haveGold'],['Öl','needOil','haveOil']];const lines=items.map(([name,need,have])=>{const required=n(need),stock=n(have),missing=Math.max(0,required-stock);return '<div>'+name+': <strong>'+fmt(missing)+'</strong> fehlen <span class="small">('+fmt(stock)+' / '+fmt(required)+')</span></div>'});const ok=items.every(([,a,b])=>n(b)>=n(a));$('resourceResult').innerHTML='<strong>'+(ok?'Upgrade-Ressourcen vorhanden':'Noch nicht genug Ressourcen')+'</strong>'+lines.join('')}
 function time(){const base=(n('days')*1440)+(n('hours')*60)+n('minutes'),bonus=n('speed')/100;const after=base/(1+bonus),remaining=Math.max(0,after-n('helpMinutes'));const d=Math.floor(remaining/1440),h=Math.floor(remaining%1440/60),m=Math.ceil(remaining%60);$('timeResult').innerHTML='<strong>Geschätzte Restzeit: '+d+' Tage · '+h+' Std. · '+m+' Min.</strong><div class="small">Grunddauer: '+fmt(base)+' Min. · nach Bonus: '+fmt(after)+' Min. · zusätzlicher Abzug: '+fmt(n('helpMinutes'))+' Min.</div>'}
 const HQ_COSTS={
-2:[68,68,0,0,2],
-3:[1000,1000,0,0,47],
-4:[2500,2500,0,0,117],
-5:[20000,20000,0,0,702],
-6:[91000,91000,0,0,2106],
-7:[240000,240000,0,0,5616],
-8:[390000,390000,0,0,11232],
-9:[620000,620000,200000,0,15725],
-10:[750000,750000,240000,0,20443],
-11:[1900000,1900000,600000,0,26575],
-12:[3200000,3200000,1000000,0,34548],
-13:[3500000,3500000,1100000,0,44912],
-14:[4900000,4900000,1600000,0,58386],
-15:[6800000,6800000,2200000,0,81740],
-16:[12000000,12000000,3900000,0,114435],
-17:[16000000,16000000,5100000,0,160209],
-18:[28000000,28000000,8900000,0,224293],
-19:[33000000,33000000,11000000,0,314009],
-20:[60000000,60000000,19000000,0,439613],
-21:[84000000,84000000,27000000,0,571497],
-22:[110000000,110000000,35000000,0,744386],
-23:[140000000,140000000,44000000,0,965829],
-24:[170000000,170000000,54000000,0,1354321],
-25:[290000000,290000000,93000000,0,1893025],
-26:[400000000,400000000,130000000,0,2650235],
-27:[530000000,530000000,170000000,0,3713929],
-28:[740000000,740000000,240000000,0,5194460],
-29:[1000000000,1000000000,330000000,0,6752797],
-30:[1400000000,1400000000,460000000,0,8778637],
-31:[1530000000,1530000000,510000000,1440000,9656500],
-32:[1700000000,1700000000,560000000,2240000,10622150],
-33:[1900000000,1900000000,620000000,3920000,11684365],
-34:[2000000000,2000000000,650000000,7050000,12268583],
-35:[2100000000,2100000000,680000000,14100000,12882013]
+2:[68,68,0,0,0],
+3:[1000,1000,0,0,0],
+4:[2500,2500,0,0,1],
+5:[20000,20000,0,0,11],
+6:[91000,91000,0,0,35],
+7:[240000,240000,0,0,93],
+8:[390000,390000,0,0,187],
+9:[620000,620000,200000,0,262],
+10:[750000,750000,240000,0,340],
+11:[1900000,1900000,600000,0,442],
+12:[3200000,3200000,1000000,0,575],
+13:[3500000,3500000,1100000,0,748],
+14:[4900000,4900000,1600000,0,973],
+15:[6800000,6800000,2200000,0,1362],
+16:[12000000,12000000,3900000,0,1860],
+17:[16000000,16000000,5100000,0,2640],
+18:[28000000,28000000,8900000,0,3720],
+19:[33000000,33000000,11000000,0,5250],
+20:[60000000,60000000,19000000,0,7320],
+21:[84000000,84000000,27000000,0,9480],
+22:[110000000,110000000,35000000,0,12360],
+23:[140000000,140000000,44000000,0,16080],
+24:[170000000,170000000,54000000,0,22500],
+25:[290000000,290000000,93000000,0,31500],
+26:[400000000,400000000,130000000,0,44160],
+27:[530000000,530000000,170000000,0,61680],
+28:[740000000,740000000,240000000,0,86520],
+29:[1000000000,1000000000,330000000,0,112500],
+30:[1400000000,1400000000,460000000,0,146280],
+31:[1530000000,1530000000,510000000,1440000,160920],
+32:[1700000000,1700000000,560000000,2240000,177000],
+33:[1900000000,1900000000,620000000,3920000,194700],
+34:[2000000000,2000000000,650000000,7050000,204420],
+35:[2100000000,2100000000,680000000,14100000,214680]
 };
 function hqPlan(){
  const from=Math.floor(n('hqCurrent')),to=Math.floor(n('hqTarget')),out=$('hqResult');
@@ -94,7 +94,7 @@ function hqPlan(){
  out.innerHTML='<strong>HQ '+from+' → '+to+'</strong>'+lines+'<div style="margin-top:8px">Grundbauzeit: <strong>'+d+' Tage · '+h+' Std. · '+m+' Min.</strong></div><div class="small">Basiszeit: '+fmt(total[4])+' Sekunden · nach Bauzeitbonus von '+fmt(n('hqSpeed'))+' % · Voraussetzungen sind separat ausgewiesen.</div>';
 }
 
-['needFood','needIron','needGold','haveFood','haveIron','haveGold'].forEach(id=>$(id).addEventListener('input',resources));
+['needFood','needIron','needGold','needOil','haveFood','haveIron','haveGold','haveOil'].forEach(id=>$(id).addEventListener('input',resources));
 ['days','hours','minutes','speed','helpMinutes'].forEach(id=>$(id).addEventListener('input',time));['hqCurrent','hqTarget','hqFoodStock','hqIronStock','hqGoldStock','hqOilStock','hqSpeed'].forEach(id=>$(id).addEventListener('input',hqPlan));resources();time();hqPlan();
 async function init(){if(!window.NOX7_CONFIG?.url||!window.NOX7_CONFIG?.anonKey||!window.supabase?.createClient){say('Datenbankkonfiguration fehlt.');return}db=window.supabase.createClient(window.NOX7_CONFIG.url,window.NOX7_CONFIG.anonKey);const s=await db.auth.getSession();if(s.error||!s.data.session){location.href='konto.html';return}$('logoutBtn').onclick=async()=>{await db.auth.signOut();location.href='konto.html'};const f=await db.rpc('get_my_alliance_profiles_v2');if(f.error){say('Zugriff nicht möglich: '+f.error.message);return}const id=localStorage.getItem('allianceHub.selectedProfileId');if(!id){say('Bitte zuerst im Allianzbereich ein aktives Allianzprofil auswählen.');return}const c=await db.rpc('get_my_active_alliance_profile_context',{p_profile_id:id});if(c.error||!c.data?.length){say('Kein freigegebenes Allianzprofil gefunden.');return}say('Freigegebener Zugang: '+c.data[0].display_name+' · '+c.data[0].alliance_name);$('context').textContent=(c.data[0].alliance_slug||'').toUpperCase()+' · RECHNER & GUIDES'}
 init().catch(e=>say('Fehler: '+(e.message||'Unbekannt')));
