@@ -49,7 +49,7 @@ function renderAlliances(){
 }
 function renderProfiles(){
  const q=$('profileSearch').value.toLowerCase(),af=$('allianceFilter').value,sf=$('statusFilter').value;
- $('profileRows').innerHTML=profiles.filter(p=>(!af||p.alliance_id===af)&&(!sf||p.profile_status===sf)&&[p.display_name,p.account_email,p.alliance_name,p.owner_id].join(' ').toLowerCase().includes(q)).map(p=>'<tr><td><b>'+esc(p.display_name)+'</b><br><small>'+esc(p.account_email)+'<br>'+esc(p.owner_id)+'</small></td><td>'+esc(p.alliance_name)+'</td><td><select data-rank="'+p.profile_id+'">'+['R1','R2','R3','R4','R5'].map(x=>'<option '+(p.game_rank===x?'selected':'')+'>'+x+'</option>').join('')+'</select></td><td>'+esc(p.profile_status)+(p.platform_locked?' · <b>gesperrt</b>':'')+'</td><td>'+Number(p.power||0).toLocaleString('de-AT')+'</td><td><div class="actions"><button data-save-profile="'+p.profile_id+'">Rang/Sperre speichern</button><button class="secondary" data-lock-profile="'+p.profile_id+'">'+(p.platform_locked?'Entsperren':'Sperren')+'</button><button class="secondary" data-transfer-profile="'+p.profile_id+'">Konto übertragen</button></div></td></tr>').join('')||'<tr><td colspan="6">Keine passenden Profile.</td></tr>';
+ $('profileRows').innerHTML=profiles.filter(p=>(!af||p.alliance_id===af)&&(!sf||p.profile_status===sf)&&[p.display_name,p.account_email,p.alliance_name,p.owner_id].join(' ').toLowerCase().includes(q)).map(p=>'<tr><td><b>'+esc(p.display_name)+'</b><br><small>'+esc(p.account_email)+'<br>'+esc(p.owner_id)+'</small></td><td>'+esc(p.alliance_name)+'</td><td><select data-rank="'+p.profile_id+'">'+['R1','R2','R3','R4','R5'].map(x=>'<option '+(p.game_rank===x?'selected':'')+'>'+x+'</option>').join('')+'</select></td><td>'+esc(p.profile_status)+(p.platform_locked?' · <b>gesperrt</b>':'')+'</td><td>'+Number(p.power||0).toLocaleString('de-AT')+'</td><td><div class="actions"><button data-save-profile="'+p.profile_id+'">Rang/Sperre speichern</button><button class="secondary" data-lock-profile="'+p.profile_id+'">'+(p.platform_locked?'Entsperren':'Sperren')+'</button><button class="secondary" data-transfer-profile="'+p.profile_id+'">Konto übertragen</button><button class="danger" data-delete-profile="'+p.profile_id+'">Profil löschen</button></div></td></tr>').join('')||'<tr><td colspan="6">Keine passenden Profile.</td></tr>';
 }
 function renderAccounts(){
  const q=$('accountSearch').value.trim().toLowerCase();
@@ -98,6 +98,14 @@ document.addEventListener('click',e=>{
  if(b.dataset.review){const yes=b.dataset.approve==='true';if(!confirm(yes?'Beitrittsanfrage genehmigen?':'Beitrittsanfrage ablehnen?'))return;const note=prompt('Optionale interne Notiz:')||null;act(()=>rpc('platform_admin_review_request',{p_request_id:b.dataset.review,p_approve:yes,p_note:note}));}
  if(b.dataset.revokeInvite){if(!confirm('Einladungscode für weitere Nutzung sperren?'))return;act(()=>rpc('platform_admin_revoke_invite',{p_invitation_id:b.dataset.revokeInvite}));}
  if(b.dataset.deleteInvite){if(!confirm('Einladungscode wirklich endgültig löschen? Codes mit vorhandenen Beitrittsanfragen können aus Gründen der Nachvollziehbarkeit nicht gelöscht werden.'))return;act(()=>rpc('platform_admin_delete_invite',{p_invitation_id:b.dataset.deleteInvite}));}
+ if(b.dataset.deleteProfile){
+  const profile=profiles.find(x=>x.profile_id===b.dataset.deleteProfile);
+  if(!profile||profile.profile_role==='admin'||profile.owner_id===ADMIN_ID)return;
+  const typed=prompt('ACHTUNG: Nur dieses Spielerprofil wird gelöscht. Das Plattformkonto und weitere Allianzprofile bleiben bestehen.\n\nZum Bestätigen exakt den Spielernamen eingeben: '+profile.display_name);
+  if(typed!==profile.display_name){if(typed!==null)msg('Löschung abgebrochen: Spielername stimmt nicht überein.');return;}
+  if(!confirm('Spielerprofil '+profile.display_name+' aus '+profile.alliance_name+' endgültig löschen? Zugehörige Statistiken und Power-Verläufe dieses Profils werden ebenfalls entfernt. Das Benutzerkonto bleibt bestehen.'))return;
+  act(async()=>{const result=await rpc('platform_admin_delete_profile',{p_profile_id:profile.profile_id});msg('Spielerprofil gelöscht. Konto und andere Profile bleiben erhalten. Entfernte Statistikeinträge: '+(result.deleted_stats??0)+'.');await load();});
+ }
  if(b.dataset.deleteAccount){
   const account=accounts.find(x=>x.user_id===b.dataset.deleteAccount);
   if(!account||account.user_id===ADMIN_ID)return;
