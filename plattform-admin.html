@@ -55,7 +55,7 @@ function renderAccounts(){
  const q=$('accountSearch').value.trim().toLowerCase();
  const rows=accounts.filter(a=>[a.username,a.user_id].join(' ').toLowerCase().includes(q));
  $('accountCount').textContent=rows.length+' von '+accounts.length+' Konten';
- $('accountRows').innerHTML=rows.map(a=>'<tr><td><b>'+esc(a.username)+'</b></td><td>'+date(a.created_at)+'</td><td>'+date(a.last_sign_in_at)+'</td><td>'+Number(a.profile_count||0)+(a.alliance_names?' · '+esc(a.alliance_names):' · noch keine Allianz')+'</td><td><span class="pill">'+(a.is_banned?'Gesperrt':'Registriert')+'</span></td><td><small>'+esc(a.user_id)+'</small></td><td>'+(a.user_id===ADMIN_ID?'<span class="muted">Geschützt</span>':'<button class="danger" data-delete-account="'+a.user_id+'">Konto löschen</button>')+'</td></tr>').join('')||'<tr><td colspan="7">Keine passenden Konten gefunden.</td></tr>';
+ $('accountRows').innerHTML=rows.map(a=>'<tr><td><b>'+esc(a.username)+'</b></td><td>'+date(a.created_at)+'</td><td>'+date(a.last_sign_in_at)+'</td><td>'+Number(a.profile_count||0)+(a.alliance_names?' · '+esc(a.alliance_names):' · noch keine Allianz')+'</td><td><span class="pill">'+(a.is_banned?'Gesperrt':'Registriert')+'</span></td><td><small>'+esc(a.user_id)+'</small></td><td>'+(a.user_id===ADMIN_ID?'<span class="muted">Geschützt</span>':'<div class="actions"><button data-add-profile="'+a.user_id+'">+ Spielerprofil</button><button class="danger" data-delete-account="'+a.user_id+'">Konto löschen</button></div>')+'</td></tr>').join('')||'<tr><td colspan="7">Keine passenden Konten gefunden.</td></tr>';
 }
 function renderRequests(){
  const f=$('requestFilter').value;
@@ -105,6 +105,22 @@ document.addEventListener('click',e=>{
   if(typed!==profile.display_name){if(typed!==null)msg('Löschung abgebrochen: Spielername stimmt nicht überein.');return;}
   if(!confirm('Spielerprofil '+profile.display_name+' aus '+profile.alliance_name+' endgültig löschen? Zugehörige Statistiken und Power-Verläufe dieses Profils werden ebenfalls entfernt. Das Benutzerkonto bleibt bestehen.'))return;
   act(async()=>{const result=await rpc('platform_admin_delete_profile',{p_profile_id:profile.profile_id});msg('Spielerprofil gelöscht. Konto und andere Profile bleiben erhalten. Entfernte Statistikeinträge: '+(result.deleted_stats??0)+'.');await load();});
+ }
+ if(b.dataset.addProfile){
+  const account=accounts.find(x=>x.user_id===b.dataset.addProfile);
+  if(!account||account.user_id===ADMIN_ID)return;
+  if(!alliances.length){msg('Es sind keine Allianzen vorhanden.',true);return;}
+  const choices=alliances.map((a,i)=>(i+1)+': '+a.alliance_name+(a.is_enabled?'':' (deaktiviert)')).join('\n');
+  const selected=prompt('Für welches Konto soll ein Spielerprofil angelegt werden?\nKonto: '+account.username+'\n\nAllianznummer eingeben:\n'+choices);
+  if(selected===null)return;
+  const index=Number(selected)-1,alliance=alliances[index];
+  if(!Number.isInteger(index)||!alliance){msg('Ungültige Allianznummer.',true);return;}
+  if(!alliance.is_enabled){msg('Diese Allianz ist deaktiviert. Bitte eine aktive Allianz wählen.',true);return;}
+  const displayName=prompt('Spielername in '+alliance.alliance_name+' (2 bis 40 Zeichen):');
+  if(displayName===null)return;
+  if(displayName.trim().length<2||displayName.trim().length>40){msg('Spielername muss 2 bis 40 Zeichen haben.',true);return;}
+  if(!confirm('Spielerprofil für Konto '+account.username+' in '+alliance.alliance_name+' mit Namen "'+displayName.trim()+'" direkt aktiv anlegen? Rang: R1.'))return;
+  act(async()=>{await rpc('platform_admin_create_profile',{p_user_id:account.user_id,p_alliance_id:alliance.alliance_id,p_display_name:displayName.trim()});msg('Spielerprofil wurde erstellt und ist aktiv.');});
  }
  if(b.dataset.deleteAccount){
   const account=accounts.find(x=>x.user_id===b.dataset.deleteAccount);
