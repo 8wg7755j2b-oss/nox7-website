@@ -30,7 +30,7 @@
 <div class="fields"><div class="field"><label for="hqCurrent">Aktuelles HQ-Level</label><input id="hqCurrent" type="number" min="1" max="34" value="30"></div><div class="field"><label for="hqTarget">Ziel-HQ-Level</label><input id="hqTarget" type="number" min="2" max="35" value="35"></div><div class="field"><label for="hqFoodStock">Nahrung auf Lager</label><input id="hqFoodStock" type="number" min="0" value="0"></div><div class="field"><label for="hqIronStock">Eisen auf Lager</label><input id="hqIronStock" type="number" min="0" value="0"></div><div class="field"><label for="hqGoldStock">Gold auf Lager</label><input id="hqGoldStock" type="number" min="0" value="0"></div><div class="field"><label for="hqOilStock">Öl auf Lager</label><input id="hqOilStock" type="number" min="0" value="0"></div><div class="field"><label for="hqSpeed">Bauzeitbonus (%)</label><input id="hqSpeed" type="number" min="0" max="10000" value="0"></div></div>
 <div class="result" id="hqResult" aria-live="polite">Wähle dein aktuelles und gewünschtes HQ-Level.</div><button type="button" class="secondary" id="resetHQ">HQ-Planer zurücksetzen</button>
 </article>
-<article class="card"><h2>HQ-Voraussetzungen</h2><p>Die Pflichtgebäude für jede Stufe werden aus der öffentlich zugänglichen Gebäudereferenz abgeleitet und für deinen gewählten Ausbauweg zusammengefasst.</p><div class="result" id="hqPrereqResult" aria-live="polite">Wähle ein Ziel-HQ-Level.</div><a class="btn secondary" href="https://lastwarsurvival.com/tools/building-resources" target="_blank" rel="noopener">Voraussetzungen in der Datenbank prüfen ↗</a><p class="small">Bei Tank-, Air- oder Missile-Center gilt die angezeigte Alternative. Bitte die Anforderungen vor dem Ausbau direkt im Spiel bestätigen.</p></article>
+<article class="card"><h2>HQ-Voraussetzungen</h2><p>Die Pflichtgebäude und HQ-Expansion-Forschung für jede Stufe werden aus aktuellen Community-Referenzen abgeleitet und für deinen gewählten Ausbauweg zusammengefasst.</p><div class="result" id="hqPrereqResult" aria-live="polite">Wähle ein Ziel-HQ-Level.</div><a class="btn secondary" href="https://lastwarsurvival.com/tools/building-resources" target="_blank" rel="noopener">Voraussetzungen in der Datenbank prüfen ↗</a><p class="small">Bei Tank-, Air- oder Missile-Center gilt die angezeigte Alternative. Bitte die Anforderungen vor dem Ausbau direkt im Spiel bestätigen.</p></article>
 <article class="card"><h2>Datengrundlage</h2><p class="small">Ressourcenkosten sind Community-Schätzwerte. Bauzeiten wurden aus der veröffentlichten Leveltabelle übernommen. Community-Werte können sich durch Updates ändern; bitte vor dem Ausbau mit dem Ingame-Fenster vergleichen.</p><a href="https://lastwarvault.com/buildings/headquarters/" target="_blank" rel="noopener">Last War Vault – HQ-Leveltabelle ↗</a><br><a href="https://extremesecrecy.github.io/lastwar-research-trees/guides/building_reference.html" target="_blank" rel="noopener">Zusätzliche Gebäudereferenz ↗</a></article>
 </div></section>
 <section class="panel" id="guides" hidden><div class="grid">
@@ -86,7 +86,8 @@ const HQ_COSTS={
 35:[2100000000,2100000000,680000000,14100000,12882013]
 };
 const HQ_PREREQS={
-3:[['Wall',2]],
+2:[['Drill Ground',1],['Squad',1]],
+3:[['Wall',2],['Recon Plane',1]],
 4:[['Drill Ground',3],['Barracks',3]],
 5:[['Wall',4],['Barracks',4]],
 6:[['Wall',5],['Drill Ground',5]],
@@ -114,7 +115,7 @@ const HQ_PREREQS={
 28:[['Tech Center',27],['Barracks',27]],
 29:[['Tech Center',28],['Tank Center',28]],
 30:[['Tech Center',29],['Drill Ground',29]],
-31:[['Tech Center',30],['Barracks',30],['Tank / Air / Missile Center',30]],
+31:[['Tech Center',30],['Barracks',30],['Tank / Air / Missile Center',30],['HQ Expansion research',1]],
 32:[['Tech Center',31],['Barracks',31],['Tank / Air / Missile Center',31],['Wall',31]],
 33:[['Tech Center',32],['Barracks',32],['Tank / Air / Missile Center',32],['Hospital',32],['Drill Ground',32]],
 34:[['Tech Center',33],['Barracks',33],['Tank / Air / Missile Center',33],['Alliance Center',33],['Wall',33]],
