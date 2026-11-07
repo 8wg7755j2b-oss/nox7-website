@@ -31,7 +31,7 @@
 <div class="result" id="hqResult" aria-live="polite">Wähle dein aktuelles und gewünschtes HQ-Level.</div>
 </article>
 <article class="card"><h2>HQ-Voraussetzungen</h2><p>Der HQ-Ausbau verlangt zusätzlich bestimmte Gebäude-Level. Diese hängen von der Zielstufe ab und müssen separat geprüft werden.</p><a class="btn secondary" href="https://lastwartutorial.com/copilot" target="_blank" rel="noopener">Builder Copilot öffnen ↗</a><p class="small">Der Copilot zeigt Pflichtgebäude, zusätzliche Kosten und Bauzeiten als anpassbare Planung. Bitte die Angaben im Spiel gegenprüfen.</p></article>
-<article class="card"><h2>Datengrundlage</h2><p class="small">Die Zahlen sind aus den öffentlich angezeigten, gerundeten Community-Referenzwerten von Last War Vault übernommen. Daher sind Summen Näherungswerte; saisonale Voraussetzungen und Boni sind nicht enthalten. Vor dem Ausbau bitte mit dem Ingame-Fenster vergleichen.</p><a href="https://extremesecrecy.github.io/lastwar-research-trees/guides/building_reference.html" target="_blank" rel="noopener">HQ-Gebäudereferenz ansehen ↗</a></article>
+<article class="card"><h2>Datengrundlage</h2><p class="small">Ressourcenkosten sind Community-Schätzwerte. Bauzeiten wurden aus der veröffentlichten Leveltabelle übernommen. Community-Werte können sich durch Updates ändern; bitte vor dem Ausbau mit dem Ingame-Fenster vergleichen.</p><a href="https://extremesecrecy.github.io/lastwar-research-trees/guides/building_reference.html" target="_blank" rel="noopener">HQ-Gebäudereferenz ansehen ↗</a></article>
 </div></section>
 <section class="panel" id="guides" hidden><div class="grid">
 <article class="card"><h2>Gebäude & HQ-Ausbau</h2><div class="guide">Gebäudekosten, Bauzeiten und Voraussetzungen pro Level.<br><a href="https://lastwarvault.com/buildings/" target="_blank" rel="noopener">Last War Vault – Building Database ↗</a></div><div class="guide">Interaktiver Gebäuderechner und Ressourcenplanung.<br><a href="https://lastwarsurvival.com/tools/building-resources" target="_blank" rel="noopener">Last War Survival – Building Resources ↗</a></div><div class="guide">HQ-Planung und Ausbaukosten als zusätzliche Orientierung.<br><a href="https://lastwarguidehub.com/calculators/hq-upgrades/" target="_blank" rel="noopener">Last War Guide Hub – HQ Planner ↗</a></div></article>
@@ -48,40 +48,40 @@ function fmt(v){return Math.ceil(v).toLocaleString('de-AT')}
 function resources(){const items=[['Nahrung','needFood','haveFood'],['Eisen','needIron','haveIron'],['Gold','needGold','haveGold']];const lines=items.map(([name,need,have])=>{const required=n(need),stock=n(have),missing=Math.max(0,required-stock);return '<div>'+name+': <strong>'+fmt(missing)+'</strong> fehlen <span class="small">('+fmt(stock)+' / '+fmt(required)+')</span></div>'});const ok=items.every(([,a,b])=>n(b)>=n(a));$('resourceResult').innerHTML='<strong>'+(ok?'Upgrade-Ressourcen vorhanden':'Noch nicht genug Ressourcen')+'</strong>'+lines.join('')}
 function time(){const base=(n('days')*1440)+(n('hours')*60)+n('minutes'),bonus=n('speed')/100;const after=base/(1+bonus),remaining=Math.max(0,after-n('helpMinutes'));const d=Math.floor(remaining/1440),h=Math.floor(remaining%1440/60),m=Math.ceil(remaining%60);$('timeResult').innerHTML='<strong>Geschätzte Restzeit: '+d+' Tage · '+h+' Std. · '+m+' Min.</strong><div class="small">Grunddauer: '+fmt(base)+' Min. · nach Bonus: '+fmt(after)+' Min. · zusätzlicher Abzug: '+fmt(n('helpMinutes'))+' Min.</div>'}
 const HQ_COSTS={
-2:[68,68,0,0,0],
-3:[1000,1000,0,0,0],
-4:[2500,2500,0,0,1],
-5:[20000,20000,0,0,11],
-6:[91000,91000,0,0,35],
-7:[240000,240000,0,0,93],
-8:[390000,390000,0,0,187],
-9:[620000,620000,200000,0,262],
-10:[750000,750000,240000,0,340],
-11:[1900000,1900000,600000,0,442],
-12:[3200000,3200000,1000000,0,575],
-13:[3500000,3500000,1100000,0,748],
-14:[4900000,4900000,1600000,0,973],
-15:[6800000,6800000,2200000,0,1362],
-16:[12000000,12000000,3900000,0,1860],
-17:[16000000,16000000,5100000,0,2640],
-18:[28000000,28000000,8900000,0,3720],
-19:[33000000,33000000,11000000,0,5250],
-20:[60000000,60000000,19000000,0,7320],
-21:[84000000,84000000,27000000,0,9480],
-22:[110000000,110000000,35000000,0,12360],
-23:[140000000,140000000,44000000,0,16080],
-24:[170000000,170000000,54000000,0,22440],
-25:[290000000,290000000,93000000,0,31500],
-26:[400000000,400000000,130000000,0,44160],
-27:[530000000,530000000,170000000,0,61680],
-28:[740000000,740000000,240000000,0,86520],
-29:[1000000000,1000000000,330000000,0,112320],
-30:[1400000000,1400000000,460000000,0,146160],
-31:[1530000000,1530000000,510000000,1440000,160560],
-32:[1700000000,1700000000,560000000,2240000,176160],
-33:[1900000000,1900000000,620000000,3920000,194760],
-34:[2000000000,2000000000,650000000,7050000,204360],
-35:[2100000000,2100000000,680000000,14100000,214560]
+2:[68,68,0,0,2],
+3:[1000,1000,0,0,47],
+4:[2500,2500,0,0,117],
+5:[20000,20000,0,0,702],
+6:[91000,91000,0,0,2106],
+7:[240000,240000,0,0,5616],
+8:[390000,390000,0,0,11232],
+9:[620000,620000,200000,0,15725],
+10:[750000,750000,240000,0,20443],
+11:[1900000,1900000,600000,0,26575],
+12:[3200000,3200000,1000000,0,34548],
+13:[3500000,3500000,1100000,0,44912],
+14:[4900000,4900000,1600000,0,58386],
+15:[6800000,6800000,2200000,0,81740],
+16:[12000000,12000000,3900000,0,114435],
+17:[16000000,16000000,5100000,0,160209],
+18:[28000000,28000000,8900000,0,224293],
+19:[33000000,33000000,11000000,0,314009],
+20:[60000000,60000000,19000000,0,439613],
+21:[84000000,84000000,27000000,0,571497],
+22:[110000000,110000000,35000000,0,744386],
+23:[140000000,140000000,44000000,0,965829],
+24:[170000000,170000000,54000000,0,1354321],
+25:[290000000,290000000,93000000,0,1893025],
+26:[400000000,400000000,130000000,0,2650235],
+27:[530000000,530000000,170000000,0,3713929],
+28:[740000000,740000000,240000000,0,5194460],
+29:[1000000000,1000000000,330000000,0,6752797],
+30:[1400000000,1400000000,460000000,0,8778637],
+31:[1530000000,1530000000,510000000,1440000,9656500],
+32:[1700000000,1700000000,560000000,2240000,10622150],
+33:[1900000000,1900000000,620000000,3920000,11684365],
+34:[2000000000,2000000000,650000000,7050000,12268583],
+35:[2100000000,2100000000,680000000,14100000,12882013]
 };
 function hqPlan(){
  const from=Math.floor(n('hqCurrent')),to=Math.floor(n('hqTarget')),out=$('hqResult');
@@ -90,8 +90,8 @@ function hqPlan(){
  for(let level=from+1;level<=to;level++){const row=HQ_COSTS[level];if(!row){out.textContent='Für eine Stufe fehlen noch Daten.';return}row.forEach((v,i)=>total[i]+=v)}
  const stocks=[n('hqFoodStock'),n('hqIronStock'),n('hqGoldStock'),n('hqOilStock')],names=['Nahrung','Eisen','Gold','Öl'];
  const lines=names.map((name,i)=>'<div>'+name+': <strong>'+fmt(total[i])+'</strong> benötigt · <strong>'+fmt(Math.max(0,total[i]-stocks[i]))+'</strong> fehlen</div>').join('');
- const adjusted=total[4]/(1+n('hqSpeed')/100),d=Math.floor(adjusted/1440),h=Math.floor(adjusted%1440/60),m=Math.ceil(adjusted%60);
- out.innerHTML='<strong>HQ '+from+' → '+to+'</strong>'+lines+'<div style="margin-top:8px">Grundbauzeit: <strong>'+d+' Tage · '+h+' Std. · '+m+' Min.</strong></div><div class="small">Basiszeit gesamt: '+fmt(total[4])+' Minuten · mit '+fmt(n('hqSpeed'))+' % Bauzeitbonus. Voraussetzungen sind nicht eingerechnet.</div>';
+ const adjusted=total[4]/(1+n('hqSpeed')/100),d=Math.floor(adjusted/86400),h=Math.floor(adjusted%86400/3600),m=Math.ceil(adjusted%3600/60);
+ out.innerHTML='<strong>HQ '+from+' → '+to+'</strong>'+lines+'<div style="margin-top:8px">Grundbauzeit: <strong>'+d+' Tage · '+h+' Std. · '+m+' Min.</strong></div><div class="small">Basiszeit: '+fmt(total[4])+' Sekunden · nach Bauzeitbonus von '+fmt(n('hqSpeed'))+' % · Voraussetzungen sind separat ausgewiesen.</div>';
 }
 
 ['needFood','needIron','needGold','haveFood','haveIron','haveGold'].forEach(id=>$(id).addEventListener('input',resources));
