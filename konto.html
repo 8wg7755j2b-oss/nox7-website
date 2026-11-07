@@ -203,16 +203,28 @@
  }
 
  async function login(){
-  const username=$('email').value.trim(),password=$('password').value;
-  if(!username||!password){
-   message('authMessage','Bitte Benutzername und Passwort eingeben.',true);
+  const identifier=$('email').value.trim(),password=$('password').value;
+  if(!identifier||!password){
+   message('authMessage','Bitte Benutzername oder Kontakt-E-Mail-Adresse und Passwort eingeben.',true);
    return;
   }
   setBusy('loginBtn',true);
   message('authMessage','Anmeldung läuft …');
-  const {error}=await db.auth.signInWithPassword({email:authEmailFromUsername(username),password});
-  setBusy('loginBtn',false);
-  if(error)message('authMessage',error.message,true);
+  try{
+   let loginEmail=authEmailFromUsername(identifier);
+   if(identifier.includes('@') && !identifier.toLowerCase().endsWith('@nox7.invalid')){
+    const {data,error}=await db.rpc('account_resolve_contact_login',{p_contact_email:identifier.toLowerCase()});
+    if(error)throw error;
+    if(!data)throw new Error('Mit dieser Kontakt-E-Mail-Adresse wurde kein Konto gefunden.');
+    loginEmail=data;
+   }
+   const {error}=await db.auth.signInWithPassword({email:loginEmail,password});
+   if(error)throw error;
+  }catch(error){
+   message('authMessage',error.message||'Anmeldung fehlgeschlagen.',true);
+  }finally{
+   setBusy('loginBtn',false);
+  }
   // Die zentrale Sitzungsprüfung übernimmt die weitere Verarbeitung.
  }
 
