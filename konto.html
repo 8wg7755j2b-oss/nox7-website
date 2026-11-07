@@ -42,6 +42,19 @@
    <div id="profileMessage" class="notice" role="status" aria-live="polite"></div>
   </div>
   <div class="card">
+   <div class="eyebrow">KONTO-EINSTELLUNGEN</div><h2>Eigene Daten ändern</h2>
+   <p class="muted">Ändere deinen Benutzernamen, hinterlege eine Kontakt-E-Mail-Adresse oder vergib ein neues Passwort. Die Kontakt-E-Mail ist nur für Kontaktzwecke gedacht; die Anmeldung erfolgt weiterhin mit deinem Benutzernamen.</p>
+   <div class="grid">
+    <div class="field"><label for="accountUsername">Benutzername</label><input id="accountUsername" type="text" minlength="3" maxlength="24" autocomplete="username"></div>
+    <div class="field"><label for="accountContactEmail">Kontakt-E-Mail-Adresse</label><input id="accountContactEmail" type="email" maxlength="254" autocomplete="email" placeholder="name@beispiel.at"></div>
+    <div class="field full"><label for="accountCurrentPassword">Aktuelles Passwort zur Bestätigung</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" placeholder="Dein aktuelles Passwort"></div>
+    <div class="field"><label for="accountNewPassword">Neues Passwort (optional)</label><input id="accountNewPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mindestens 8 Zeichen"></div>
+    <div class="field"><label for="accountNewPassword2">Neues Passwort wiederholen</label><input id="accountNewPassword2" type="password" minlength="8" autocomplete="new-password" placeholder="Neues Passwort wiederholen"></div>
+    <div class="field full"><button id="saveAccountDataBtn" type="button">Änderungen speichern</button></div>
+   </div>
+   <div id="accountDataMessage" class="notice hidden" role="status" aria-live="polite"></div>
+  </div>
+  <div class="card">
    <div class="eyebrow">NEUE ALLIANZ</div><h2>Eigene Allianz gründen</h2>
    <p class="muted">Erstelle eine neue Allianz. Du wirst automatisch ihr R5 und erster Administrator.</p>
    <div class="grid">
@@ -140,6 +153,11 @@
   $('authSection').classList.add('hidden');
   $('accountSection').classList.remove('hidden');
   $('accountEmail').textContent=user.user_metadata?.username||user.email||'Angemeldet';
+  $('accountUsername').value=user.user_metadata?.username||'';
+  $('accountContactEmail').value=user.user_metadata?.contact_email||'';
+  $('accountCurrentPassword').value='';
+  $('accountNewPassword').value='';
+  $('accountNewPassword2').value='';
   updatePlatformAdminLink();
 
   if(deletion?.cancelled){
@@ -165,6 +183,7 @@
   $('createAllianceName').addEventListener('input',()=>{if(!$('createAllianceSlug').dataset.edited)$('createAllianceSlug').value=slugify($('createAllianceName').value)});
   $('createAllianceSlug').addEventListener('input',()=>{$('createAllianceSlug').dataset.edited='true';$('createAllianceSlug').value=slugify($('createAllianceSlug').value)});
   $('deleteAccountBtn').addEventListener('click',requestAccountDeletion);
+  $('saveAccountDataBtn').addEventListener('click',saveAccountData);
 
   // Jede authentifizierte Sitzung wird zentral serverseitig geprüft.
   db.auth.onAuthStateChange((event,session)=>{
@@ -270,6 +289,66 @@
   const p=data[0];
   message('profileMessage','Aktives Profil: '+p.display_name+' · '+p.alliance_name+'. Allianzbereich wird geöffnet …');
   location.href='allianz.html';
+ }
+
+ async function saveAccountData(){
+  if(!sessionUser){message('accountDataMessage','Bitte zuerst anmelden.',true);return;}
+  const username=$('accountUsername').value.trim().toLowerCase();
+  const contactEmail=$('accountContactEmail').value.trim();
+  const currentPassword=$('accountCurrentPassword').value;
+  const newPassword=$('accountNewPassword').value;
+  const newPassword2=$('accountNewPassword2').value;
+  const oldUsername=sessionUser.user_metadata?.username||'';
+
+  if(!/^[a-z0-9._]{3,24}$/.test(username)){
+   message('accountDataMessage','Der Benutzername muss 3 bis 24 Zeichen haben und darf nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich enthalten.',true);return;
+  }
+  if(contactEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(contactEmail)){
+   message('accountDataMessage','Bitte eine gültige Kontakt-E-Mail-Adresse eingeben.',true);return;
+  }
+  if(!currentPassword){
+   message('accountDataMessage','Bitte zur Sicherheit dein aktuelles Passwort eingeben.',true);return;
+  }
+  if(newPassword || newPassword2){
+   if(newPassword.length<8 || newPassword!==newPassword2){
+    message('accountDataMessage',newPassword.length<8?'Das neue Passwort muss mindestens 8 Zeichen haben.':'Die neuen Passwörter stimmen nicht überein.',true);return;
+   }
+  }
+
+  setBusy('saveAccountDataBtn',true);
+  message('accountDataMessage','Identität wird geprüft …');
+  try{
+   const verified=await db.auth.signInWithPassword({email:sessionUser.email,password:currentPassword});
+   if(verified.error)throw new Error('Das aktuelle Passwort ist nicht korrekt.');
+
+   if(username!==oldUsername){
+    message('accountDataMessage','Benutzername wird geändert …');
+    const {error}=await db.rpc('account_update_own_username',{p_username:username});
+    if(error)throw error;
+    const refreshed=await db.auth.refreshSession();
+    if(refreshed.error)throw refreshed.error;
+    sessionUser=refreshed.data.session.user;
+   }
+
+   const metadata={...(sessionUser.user_metadata||{}),contact_email:contactEmail||null};
+   const updates={data:metadata};
+   if(newPassword)updates.password=newPassword;
+   message('accountDataMessage','Kontodaten werden gespeichert …');
+   const {data,error}=await db.auth.updateUser(updates);
+   if(error)throw error;
+   sessionUser=data.user;
+   $('accountEmail').textContent=sessionUser.user_metadata?.username||sessionUser.email||'Angemeldet';
+   $('accountUsername').value=sessionUser.user_metadata?.username||username;
+   $('accountContactEmail').value=sessionUser.user_metadata?.contact_email||'';
+   $('accountCurrentPassword').value='';
+   $('accountNewPassword').value='';
+   $('accountNewPassword2').value='';
+   message('accountDataMessage','Deine Kontodaten wurden erfolgreich aktualisiert.');
+  }catch(error){
+   message('accountDataMessage','Änderung fehlgeschlagen: '+(error.message||'Unbekannter Fehler'),true);
+  }finally{
+   setBusy('saveAccountDataBtn',false);
+  }
  }
 
  async function requestAccountDeletion(){
