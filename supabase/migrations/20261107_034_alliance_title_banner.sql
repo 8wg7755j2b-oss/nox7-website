@@ -80,7 +80,7 @@ as $function$
 declare v_alliance_id uuid; v_rank text;
 begin
   if auth.uid() is null then raise exception 'Anmeldung erforderlich'; end if;
-  if p_banner_path is not null and (length(p_banner_path) > 300 or p_banner_path !~ '^[0-9a-f-]{36}/banner\\.(jpg|png|webp)$') then
+  if p_banner_path is not null and (length(p_banner_path) > 300 or p_banner_path !~ '^[0-9a-f-]{36}/banner[.](jpg|png|webp)$') then
     raise exception 'Ungültiger Titelbild-Pfad';
   end if;
   select p.alliance_id, p.game_rank into v_alliance_id, v_rank
