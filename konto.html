@@ -52,8 +52,8 @@
    </div>
   </div>
   <div class="card">
-   <div class="eyebrow">ALLIANZ FINDEN</div><h2>Bestehender Allianz beitreten</h2>
-   <p class="muted">Suche eine freigeschaltete Allianz und sende eine Beitrittsanfrage. Die Allianzführung muss deinen Antrag bestätigen.</p>
+   <div class="eyebrow">SPIELERPROFIL ERWEITERN</div><h2>Weiteres Spielerprofil hinzufügen</h2>
+   <p class="muted">Du kannst auch mehrere Spielerprofile in derselben Allianz führen. Gib für jedes Profil einen eigenen, noch freien Spielernamen ein. Jedes neue Profil wird der Allianzführung zur Freigabe vorgelegt.</p>
    <div class="grid">
     <div class="field"><label for="allianceSearch">Allianz suchen</label><input id="allianceSearch" maxlength="80" placeholder="Allianzname oder Kürzel"></div>
     <div class="field"><label for="joinName">Dein Spielername in dieser Allianz</label><input id="joinName" maxlength="40" placeholder="2 bis 40 Zeichen"></div>
@@ -312,13 +312,13 @@
    const row=document.createElement('div');row.className='profile';
    const info=document.createElement('div'),h=document.createElement('h3'),detail=document.createElement('div');
    h.textContent=a.alliance_name;detail.className='small';detail.textContent=a.alliance_slug+' · '+a.active_members+' aktive Mitglieder';info.append(h,detail);
-   const btn=document.createElement('button');btn.textContent='Beitritt beantragen';btn.addEventListener('click',()=>requestJoinById(a.alliance_id,a.alliance_name));
+   const btn=document.createElement('button');btn.textContent='Spielerprofil hinzufügen';btn.addEventListener('click',()=>requestJoinById(a.alliance_id,a.alliance_name));
    row.append(info,btn);root.append(row);
   });
  }
  async function requestJoinById(allianceId,allianceName){
   const name=$('joinName').value.trim();if(name.length<2||name.length>40){message('profileMessage','Bitte zuerst deinen Spielernamen (2–40 Zeichen) eingeben.',true);return;}
-  message('profileMessage','Beitrittsanfrage für '+allianceName+' wird übermittelt …');
+  message('profileMessage','Profilanfrage für '+allianceName+' wird übermittelt …');
   const {data,error}=await db.rpc('request_alliance_join_by_id',{p_alliance_id:allianceId,p_display_name:name});
   if(error){message('profileMessage','Beitrittsanfrage fehlgeschlagen: '+error.message,true);return;}
   message('profileMessage',data?.message||'Beitrittsanfrage wurde übermittelt.');await loadProfiles();
