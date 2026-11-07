@@ -30,7 +30,7 @@
 <div class="fields"><div class="field"><label for="hqCurrent">Aktuelles HQ-Level</label><input id="hqCurrent" type="number" min="1" max="34" value="30"></div><div class="field"><label for="hqTarget">Ziel-HQ-Level</label><input id="hqTarget" type="number" min="2" max="35" value="35"></div><div class="field"><label for="hqFoodStock">Nahrung auf Lager</label><input id="hqFoodStock" type="number" min="0" value="0"></div><div class="field"><label for="hqIronStock">Eisen auf Lager</label><input id="hqIronStock" type="number" min="0" value="0"></div><div class="field"><label for="hqGoldStock">Gold auf Lager</label><input id="hqGoldStock" type="number" min="0" value="0"></div><div class="field"><label for="hqOilStock">Öl auf Lager</label><input id="hqOilStock" type="number" min="0" value="0"></div><div class="field"><label for="hqSpeed">Bauzeitbonus (%)</label><input id="hqSpeed" type="number" min="0" max="10000" value="0"></div></div>
 <div class="result" id="hqResult" aria-live="polite">Wähle dein aktuelles und gewünschtes HQ-Level.</div><button type="button" class="secondary" id="resetHQ">HQ-Planer zurücksetzen</button>
 </article>
-<article class="card"><h2>HQ-Voraussetzungen</h2><p>Der HQ-Ausbau verlangt zusätzlich bestimmte Gebäude-Level. Diese hängen von der Zielstufe ab und müssen separat geprüft werden.</p><a class="btn secondary" href="https://lastwartutorial.com/copilot" target="_blank" rel="noopener">Builder Copilot öffnen ↗</a><p class="small">Der Copilot zeigt Pflichtgebäude, zusätzliche Kosten und Bauzeiten als anpassbare Planung. Bitte die Angaben im Spiel gegenprüfen.</p></article>
+<article class="card"><h2>HQ-Voraussetzungen</h2><p>Die Pflichtgebäude für jede Stufe werden aus der öffentlich zugänglichen Gebäudereferenz abgeleitet und für deinen gewählten Ausbauweg zusammengefasst.</p><div class="result" id="hqPrereqResult" aria-live="polite">Wähle ein Ziel-HQ-Level.</div><a class="btn secondary" href="https://lastwarsurvival.com/tools/building-resources" target="_blank" rel="noopener">Voraussetzungen in der Datenbank prüfen ↗</a><p class="small">Bei Tank-, Air- oder Missile-Center gilt die angezeigte Alternative. Bitte die Anforderungen vor dem Ausbau direkt im Spiel bestätigen.</p></article>
 <article class="card"><h2>Datengrundlage</h2><p class="small">Ressourcenkosten sind Community-Schätzwerte. Bauzeiten wurden aus der veröffentlichten Leveltabelle übernommen. Community-Werte können sich durch Updates ändern; bitte vor dem Ausbau mit dem Ingame-Fenster vergleichen.</p><a href="https://lastwarvault.com/buildings/headquarters/" target="_blank" rel="noopener">Last War Vault – HQ-Leveltabelle ↗</a><br><a href="https://extremesecrecy.github.io/lastwar-research-trees/guides/building_reference.html" target="_blank" rel="noopener">Zusätzliche Gebäudereferenz ↗</a></article>
 </div></section>
 <section class="panel" id="guides" hidden><div class="grid">
@@ -85,8 +85,56 @@ const HQ_COSTS={
 34:[2000000000,2000000000,650000000,7050000,12268583],
 35:[2100000000,2100000000,680000000,14100000,12882013]
 };
+const HQ_PREREQS={
+3:[['Wall',2]],
+4:[['Drill Ground',3],['Barracks',3]],
+5:[['Wall',4],['Barracks',4]],
+6:[['Wall',5],['Drill Ground',5]],
+7:[['Wall',6],['Tank Center',6]],
+8:[['Tech Center',7],['Alliance Center',7]],
+9:[['Tech Center',8],['Tank Center',8]],
+10:[['Tech Center',9],['Hospital',9]],
+11:[['Tech Center',10],['Wall',10]],
+12:[['Tech Center',11],['Barracks',11]],
+13:[['Tech Center',12],['Tank Center',12]],
+14:[['Tech Center',13],['Drill Ground',13]],
+15:[['Tech Center',14],['Wall',14]],
+16:[['Tech Center',15],['Alliance Center',15]],
+17:[['Tech Center',16],['Tank Center',16]],
+18:[['Tech Center',17],['Hospital',17]],
+19:[['Tech Center',18],['Wall',18]],
+20:[['Tech Center',19],['Barracks',19]],
+21:[['Tech Center',20],['Tank Center',20]],
+22:[['Tech Center',21],['Drill Ground',21]],
+23:[['Tech Center',22],['Wall',22]],
+24:[['Tech Center',23],['Alliance Center',23]],
+25:[['Tech Center',24],['Tank Center',24]],
+26:[['Tech Center',25],['Hospital',25]],
+27:[['Tech Center',26],['Wall',26]],
+28:[['Tech Center',27],['Barracks',27]],
+29:[['Tech Center',28],['Tank Center',28]],
+30:[['Tech Center',29],['Drill Ground',29]],
+31:[['Tech Center',30],['Barracks',30],['Tank / Air / Missile Center',30]],
+32:[['Tech Center',31],['Barracks',31],['Tank / Air / Missile Center',31],['Wall',31]],
+33:[['Tech Center',32],['Barracks',32],['Tank / Air / Missile Center',32],['Hospital',32],['Drill Ground',32]],
+34:[['Tech Center',33],['Barracks',33],['Tank / Air / Missile Center',33],['Alliance Center',33],['Wall',33]],
+35:[['Tech Center',34],['Barracks',34],['Tank / Air / Missile Center',34],['Hospital',34],['Drill Ground',34]]
+};
+function renderHQPrereqs(from,to){
+ const normal={},alternatives=[];
+ for(let level=from+1;level<=to;level++){
+  for(const [name,required] of (HQ_PREREQS[level]||[])){
+   if(name==='Tank / Air / Missile Center'){alternatives.push(required);continue}
+   normal[name]=Math.max(normal[name]||0,required);
+  }
+ }
+ const items=Object.entries(normal).sort((a,b)=>a[0].localeCompare(b[0],'de')).map(([name,level])=>'<li><strong>'+name+': Level '+level+'</strong></li>');
+ if(alternatives.length)items.push('<li><strong>Mindestens eines dieser Gebäude: Tank Center, Air Center oder Missile Center – Level '+Math.max(...alternatives)+'</strong></li>');
+ $('hqPrereqResult').innerHTML=items.length?'<strong>Benötigte Pflichtgebäude für HQ '+(from+1)+' bis '+to+'</strong><ul>'+items.join('')+'</ul>':'<strong>Für diesen Ausbauweg sind in der Referenztabelle keine Pflichtgebäude hinterlegt.</strong>';
+}
 function hqPlan(){
  const from=Math.floor(n('hqCurrent')),to=Math.floor(n('hqTarget')),out=$('hqResult');
+ renderHQPrereqs(from,to);
  if(from<1||from>34||to<2||to>35||to<=from){out.textContent='Bitte gültige Level wählen: Ziel-Level muss höher als das aktuelle Level sein (maximal 35).';return}
  const total=[0,0,0,0,0];
  for(let level=from+1;level<=to;level++){const row=HQ_COSTS[level];if(!row){out.textContent='Für eine Stufe fehlen noch Daten.';return}row.forEach((v,i)=>total[i]+=v)}
